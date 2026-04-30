@@ -158,6 +158,13 @@
       transform: scale(0.94);
     }
 
+    #titleScreen.is-modal-only .panel {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: scale(0.98);
+    }
+
     .title {
       margin: 0 0 10px;
       font-size: 44px;
@@ -6697,6 +6704,8 @@
       "ひどいじゃないか",
       "攻撃しないでくれ"
     ];
+    const NPC_HIT_SPEECH_TEXTURES = new Map();
+    const NPC_SPEECH_BASE_SCALE = { x: 4.1, y: 1.76 };
     const DESTRUCTIBLE_THROW_PROFILES = {
       "こーん": {
         style: "cylinder",
@@ -7056,6 +7065,7 @@
       practiceCarrierCycleScore: 0,
       ringRevealUntil: 0,
       practiceRooftopRevealRespawnAt: 0,
+      nextPracticeDestructibleRespawnCheckAt: 0,
       pendingModalAction: "",
       isShowingPriorityMessage: false
     };
@@ -12623,6 +12633,7 @@
 
     function showRules(mode = "normal") {
       if (game.screen !== "title") return;
+      setTitleModalUiSuppressed(false);
       game.mode = mode;
       game.screen = "rules";
       game.pendingModalAction = "";
@@ -12634,13 +12645,18 @@
       startTitleBgm(false);
     }
 
+    function setTitleModalUiSuppressed(suppressed) {
+      els.titleScreen?.classList.toggle("is-modal-only", Boolean(suppressed));
+    }
+
     function showPracticeResetConfirm() {
       if (game.screen !== "title") return;
       game.mode = "practice";
       game.screen = "practiceResetConfirm";
       game.pendingModalAction = "practiceReset";
       els.modalTitle.textContent = "最初から始めますか？";
-      els.modalOkButton.textContent = "はじめる";
+      els.modalOkButton.textContent = "リセットする";
+      els.modalCancelButton.textContent = "やめる";
       els.modalCancelButton.classList.remove("hidden");
       els.modalText.replaceChildren(
         ...["れんしゅうの つづきは けして", "さいしょから やりなおします。"].map((line) => {
@@ -12650,6 +12666,7 @@
           return span;
         })
       );
+      setTitleModalUiSuppressed(true);
       els.modalLayer.classList.remove("hidden");
       startTitleBgm(false);
     }
@@ -12657,6 +12674,7 @@
     function closeModalToTitle() {
       game.pendingModalAction = "";
       game.screen = "title";
+      setTitleModalUiSuppressed(false);
       els.modalLayer.classList.add("hidden");
       els.modalCancelButton.classList.add("hidden");
       els.modalOkButton.textContent = "わかった";
@@ -12669,6 +12687,7 @@
       clearProgressState({ mode: "practice", updateUi: false });
       game.mode = "practice";
       game.pendingModalAction = "";
+      setTitleModalUiSuppressed(false);
       beginCountdown();
     }
 
@@ -12816,6 +12835,7 @@
       game.infiniteStaminaUntil = 0;
       game.ringRevealUntil = 0;
       game.practiceRooftopRevealRespawnAt = 0;
+      game.nextPracticeDestructibleRespawnCheckAt = 0;
       clearPlayerTrapState();
       clearRingHint();
       clearPickupEffects();
@@ -12860,6 +12880,7 @@
       clearCountdown();
       clearPendingResult();
       stopGameBgm();
+      setTitleModalUiSuppressed(false);
       updateRainAudio(0);
       game.screen = "title";
       updateOrientation();
@@ -12878,6 +12899,7 @@
       clearRingRevealPillars();
       game.ringRevealUntil = 0;
       game.practiceRooftopRevealRespawnAt = 0;
+      game.nextPracticeDestructibleRespawnCheckAt = 0;
       resetActiveControls();
       updateProgressResumeUi();
       startTitleBgm(true);
@@ -12922,7 +12944,8 @@
         updateRings(now);
       }
 
-      if (game.mode === "practice") {
+      if (game.mode === "practice" && now >= (game.nextPracticeDestructibleRespawnCheckAt || 0)) {
+        game.nextPracticeDestructibleRespawnCheckAt = now + 500;
         world.destructibles.forEach(dest => {
           if (dest.destroyed && dest.destroyedAt && now - dest.destroyedAt > 60000) {
             dest.destroyed = false;
@@ -16467,15 +16490,15 @@
       });
       const sprite = new THREE.Sprite(material);
       sprite.renderOrder = 42;
-      sprite.scale.set(2.15, 0.92, 1);
+      sprite.scale.set(NPC_SPEECH_BASE_SCALE.x, NPC_SPEECH_BASE_SCALE.y, 1);
 
       const group = new THREE.Group();
       group.name = "mob-hit-speech";
       group.add(sprite);
       const side = Math.random() < 0.5 ? -1 : 1;
       group.position.set(
-        npc.group.position.x + side * 0.42,
-        3.05,
+        npc.group.position.x + side * 0.58,
+        3.55,
         npc.group.position.z
       );
 
@@ -16485,9 +16508,8 @@
         npc,
         sprite,
         materials: [material],
-        textures: [texture],
-        offsetX: side * 0.42,
-        offsetZ: -0.12,
+        offsetX: side * 0.58,
+        offsetZ: -0.18,
         startedAt: performance.now(),
         duration: 1250
       });
@@ -16495,38 +16517,42 @@
     }
 
     function createMobSpeechTexture(text) {
+      const cached = NPC_HIT_SPEECH_TEXTURES.get(text);
+      if (cached) return cached;
+
       const canvas = document.createElement("canvas");
-      canvas.width = 384;
-      canvas.height = 168;
+      canvas.width = 768;
+      canvas.height = 336;
       const context = canvas.getContext("2d");
       context.clearRect(0, 0, canvas.width, canvas.height);
 
       context.fillStyle = "rgba(255, 255, 255, 0.96)";
       context.strokeStyle = "rgba(20, 24, 28, 0.9)";
-      context.lineWidth = 8;
-      roundRect(context, 24, 18, 336, 106, 30);
+      context.lineWidth = 16;
+      roundRect(context, 48, 36, 672, 212, 60);
       context.fill();
       context.stroke();
 
       context.beginPath();
-      context.moveTo(166, 118);
-      context.lineTo(190, 154);
-      context.lineTo(224, 118);
+      context.moveTo(332, 236);
+      context.lineTo(380, 308);
+      context.lineTo(448, 236);
       context.closePath();
       context.fill();
       context.stroke();
 
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.font = text.length >= 8 ? "900 37px sans-serif" : "900 48px sans-serif";
-      context.lineWidth = 5;
+      context.font = text.length >= 8 ? "900 74px sans-serif" : "900 96px sans-serif";
+      context.lineWidth = 10;
       context.strokeStyle = "rgba(255, 255, 255, 0.96)";
-      context.strokeText(text, 192, 72);
+      context.strokeText(text, 384, 144);
       context.fillStyle = "#1d252c";
-      context.fillText(text, 192, 72);
+      context.fillText(text, 384, 144);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.colorSpace = THREE.SRGBColorSpace;
+      NPC_HIT_SPEECH_TEXTURES.set(text, texture);
       return texture;
     }
 
@@ -16984,7 +17010,7 @@
           if (effect.npc?.group) {
             effect.group.position.set(
               effect.npc.group.position.x + (effect.offsetX || 0),
-              3.05 + progress * 0.34,
+              3.55 + progress * 0.42,
               effect.npc.group.position.z + (effect.offsetZ || 0)
             );
           } else {
@@ -16992,7 +17018,7 @@
           }
           const intro = THREE.MathUtils.clamp(progress / 0.16, 0, 1);
           const pop = 0.9 + Math.sin(Math.min(1, progress * 3.2) * Math.PI) * 0.11;
-          effect.sprite.scale.set(2.15 * pop, 0.92 * pop, 1);
+          effect.sprite.scale.set(NPC_SPEECH_BASE_SCALE.x * pop, NPC_SPEECH_BASE_SCALE.y * pop, 1);
           effect.materials[0].opacity = Math.min(intro, fade * 1.35);
         } else if (effect.type === "runTrail") {
           effect.group.position.y = SURFACE_Y.marking + 0.022 + progress * 0.018;
@@ -18427,27 +18453,29 @@
         // --- 1) 車 vs モブ: 同一車線前方にいたら停止/反転し、モブは回避させる ---
         let blockingNpc = null;
         let blockingNpcDist = Infinity;
+        let blockingNpcProfile = null;
         for (const npc of world.npcs) {
           if (!npc || npc.isDefeated) continue;
           if (!npc.group?.visible) continue;
-          if (npc.kind === "danger") continue;
-          if (now < (npc.pauseUntil || 0)) continue;
+          if (npc.kind !== "danger" && now < (npc.pauseUntil || 0)) continue;
 
           const npcAxis = car.axis === "x" ? npc.group.position.x : npc.group.position.z;
           const npcLane = car.axis === "x" ? npc.group.position.z : npc.group.position.x;
           if (!isAhead(npcAxis)) continue;
-          if (laneDistance(npcLane) > laneTolerance) continue;
-          const dist = axisDistance(npcAxis);
-          if (dist > npcLookahead) continue;
+          const profile = getCarNpcBlockProfile(npc, laneTolerance, npcLookahead, npcStopDistance, npcReverseAfterMs);
+          if (laneDistance(npcLane) > profile.laneTolerance) continue;
+          const dist = Math.max(0, axisDistance(npcAxis) - profile.axisPadding);
+          if (dist > profile.lookahead) continue;
           if (dist < blockingNpcDist) {
             blockingNpcDist = dist;
             blockingNpc = npc;
+            blockingNpcProfile = profile;
           }
         }
 
         if (blockingNpc) {
-          // モブを車から離す（連打しない）
-          if (now >= (blockingNpc.avoidCarUntil || 0)) {
+          // 通常モブだけ車から離す。危険モブは追跡AIを崩さず、車側で止まる。
+          if (blockingNpc.kind !== "danger" && now >= (blockingNpc.avoidCarUntil || 0)) {
             blockingNpc.avoidCarUntil = now + npcAvoidCooldownMs;
             retargetNpcAwayFrom(blockingNpc, car.x, car.z, null, { force: true });
             blockingNpc.avoidNpcUntil = Math.max(blockingNpc.avoidNpcUntil || 0, now + 260);
@@ -18455,7 +18483,7 @@
 
           // 車は減速→停止
           car.slowUntil = Math.max(car.slowUntil || 0, now + slowDurationMs);
-          if (blockingNpcDist <= npcStopDistance) {
+          if (blockingNpcDist <= (blockingNpcProfile?.stopDistance || npcStopDistance)) {
             car.stopUntil = Math.max(car.stopUntil || 0, now + 180);
             if (!car.stuckSince) car.stuckSince = now;
           } else {
@@ -18463,7 +18491,7 @@
           }
 
           // 詰まりが続いたら反転して離脱（渋滞回避）
-          if (car.stuckSince && now - car.stuckSince > npcReverseAfterMs) {
+          if (car.stuckSince && now - car.stuckSince > (blockingNpcProfile?.reverseAfterMs || npcReverseAfterMs)) {
             car.dir *= -1;
             car.stuckSince = 0;
             car.stopUntil = 0;
@@ -18594,6 +18622,28 @@
           car.slowUntil = Math.max(car.slowUntil || 0, now + slowDurationMs);
         }
       });
+    }
+
+    function getCarNpcBlockProfile(npc, baseLaneTolerance, baseLookahead, baseStopDistance, baseReverseAfterMs) {
+      const radius = Math.max(npc?.radius || CONFIG.npcRadius, 0.1);
+      if (npc?.kind !== "danger") {
+        return {
+          laneTolerance: baseLaneTolerance + radius * 0.28,
+          lookahead: baseLookahead + radius * 0.45,
+          stopDistance: baseStopDistance + radius * 0.25,
+          reverseAfterMs: baseReverseAfterMs,
+          axisPadding: radius * 0.45
+        };
+      }
+
+      const dangerReach = Math.max(radius, (npc.contactRange || 0) * 0.55);
+      return {
+        laneTolerance: baseLaneTolerance + dangerReach * 0.85,
+        lookahead: baseLookahead + dangerReach * 1.45,
+        stopDistance: baseStopDistance + dangerReach * 1.1,
+        reverseAfterMs: Math.max(620, baseReverseAfterMs - 170),
+        axisPadding: dangerReach * 0.7
+      };
     }
 
     function triggerCarHitPenalty(car) {
