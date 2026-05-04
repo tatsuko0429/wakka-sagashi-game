@@ -1,4 +1,13 @@
 <!doctype html>
+<!--
+  2026年4月27日時点の開発者向け保守メモ:
+  このファイルは「わっかあつめ」の実装本体で、HTML/CSS/JavaScriptを1ファイルに集約している。
+  ログイン、サーバーAPI、印刷専用処理、ビルド工程は存在せず、ゲーム進行とランキングはlocalStorageで完結する。
+  変更時は「タイトル表示 -> ルールモーダル -> カウントダウン -> プレイ -> 結果」と
+  「本番/練習の保存・復元」が壊れていないかを最優先で確認する。
+  最低限の作業順は、先にCONFIG/STAGE/els/game/worldの役割を確認し、次に対象関数の呼び出し元と保存復元への影響を見ること。
+  変更後は、通常開始、練習開始/中断/再開、リング取得、危険NPC接触、結果ランキング、画面回転、リロード後再開を最低限確認する。
+-->
 <html lang="ja">
 <head>
   <meta charset="utf-8">
@@ -11,9 +20,16 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <!-- manifest.webmanifestはJSONでコメント不可。PWA名、開始URL、横向き固定、アイコン参照はこのリンク先と同期している。 -->
   <link rel="manifest" href="manifest.webmanifest">
   <title>わっかあつめ</title>
   <style>
+    /*
+      2026年4月27日時点の開発者向け保守メモ:
+      CSSはゲームキャンバスの上にタイトル/結果/HUD/操作ボタン/モーダルを重ねる役割に限定している。
+      DOM構造とIDはJavaScriptのels参照と密結合しているため、見た目だけの変更でもID削除・階層変更はJS側確認が必須。
+      印刷用CSSはなく、画面プレイ専用。100dvh/dvw、safe-area、touch-actionはスマホ横向き運用の前提なので安易に外さない。
+    */
     :root {
       --ink: #f7fbff;
       --panel: rgba(21, 28, 34, 0.78);
@@ -121,6 +137,11 @@
       display: none !important;
     }
 
+    /*
+      .screen.hiddenはdisplayを消さずopacity/visibilityで退避する。
+      タイトル・結果画面のフェードとモーダル重ね合わせがこの挙動に依存しているため、
+      一般的なdisplay:none切替へ変える場合はshowRules/beginCountdown/showTitleも同時に確認する。
+    */
     .screen {
       position: absolute;
       inset: 0;
@@ -256,6 +277,11 @@
       gap: 12px;
     }
 
+    /*
+      HUD、ミニマップ、トーストはThree.jsキャンバス上の2D UI。
+      pointer-eventsは「表示は重ねるが、操作面は特定ボタンだけ受ける」ための調整なので、
+      z-indexやpointer-eventsを触ったらジョイスティック/カメラドラッグ/ボタンの同時操作を確認する。
+    */
     .hudBox {
       min-width: 140px;
       width: auto;
@@ -634,6 +660,10 @@
       pointer-events: none;
     }
 
+    /*
+      入力UIは左ジョイスティック、右側アクション、右半面カメラ操作の固定配置。
+      JavaScript側はpointer captureと多点ピンチを前提にしているため、当たり判定領域(#cameraZone等)の変更は入力不具合に直結する。
+    */
     #cameraZone {
       position: absolute;
       inset: 0 0 0 42%;
@@ -1025,6 +1055,10 @@
       background: rgba(6, 11, 16, 0.48);
     }
 
+    /*
+      モーダルは「あそびかた」と練習リセット確認で同じDOMを使い回す。
+      #titleScreen.is-modal-only は確認ダイアログ時にタイトル本体だけを隠すための状態で、modalLayer自体の表示とは独立している。
+    */
     #orientationLayer {
       z-index: 60;
       align-items: flex-start;
@@ -1327,6 +1361,10 @@
     }
 
     @media (orientation: portrait) {
+      /*
+        縦向きはプレイ継続可能だが、視界が狭くなるため警告を出す設計。
+        操作ボタンのclamp値は小画面で重ならないための下限/上限なので、変更時は縦向き実機幅で確認する。
+      */
       #controls {
         --action-size: clamp(76px, 20vw, 90px);
         --action-gap: 10px;
@@ -1492,6 +1530,10 @@
     }
 
     @media (max-height: 520px) and (orientation: landscape) {
+      /*
+        横向き低身長端末向けの退避レイアウト。
+        結果画面のランキングと下部ボタンを1画面に収めるための調整が多く、結果DOMや文言を変えたらここも確認する。
+      */
       .screen {
         padding: 10px;
       }
@@ -1785,11 +1827,16 @@
   </style>
 </head>
 <body>
+  <!--
+    HTMLの責務は、Three.js描画キャンバスと上乗せUIの置き場を固定IDで提供すること。
+    各IDはscript内のelsオブジェクトで直接参照されるため、ID名変更・要素削除・canvasの差し替えは初期化失敗につながる。
+  -->
   <main id="gameRoot" aria-label="わっかあつめ">
     <canvas id="gameCanvas"></canvas>
     <canvas id="nightOverlay" aria-hidden="true"></canvas>
     <div id="dangerFlash" aria-hidden="true"></div>
 
+    <!-- 初期表示。通常の開始と練習開始、保存データがある場合の再開導線を同じパネル内で切り替える。 -->
     <section id="titleScreen" class="screen">
       <div class="panel">
         <h1 id="titleHeading" class="title">わっかあつめ</h1>
@@ -1816,6 +1863,7 @@
       </div>
     </section>
 
+    <!-- 結果画面。本番はクリアタイム、練習は個数をランキング基準にするため、renderResult/renderRankingListと項目構成を合わせる。 -->
     <section id="resultScreen" class="screen hidden" aria-live="polite">
       <div class="panel">
         <h2 class="dialogTitle">けっか</h2>
@@ -1873,6 +1921,7 @@
     </div>
     <div id="hintToast" class="hidden" aria-live="polite"></div>
 
+    <!-- プレイ中UI。aria-hiddenは初期値で、表示制御はclassのhiddenと各ボタンのJS状態更新で行う。 -->
     <div id="controls" class="hidden" aria-hidden="true">
       <div id="cameraZone"></div>
       <div id="joystick" aria-label="いどう">
@@ -1900,6 +1949,7 @@
       </button>
     </div>
 
+    <!-- ルール説明と確認ダイアログの共用レイヤー。OKボタンの意味はgame.pendingModalActionで分岐する。 -->
     <div id="modalLayer" class="hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="panel">
         <h2 id="modalTitle" class="dialogTitle">あそびかた</h2>
@@ -1932,8 +1982,22 @@
   </main>
 
   <script type="module">
+    /*
+      2026年4月27日時点の開発者向け保守メモ:
+      JavaScriptはThree.jsの3D世界、ゲーム状態、入力、音声、保存/復元をまとめて管理する。
+      主要な共有状態は CONFIG(不変設定) / STAGE(地形と配置) / els(DOM参照) / game(進行状態) / input(ポインタ状態) / sound(音声状態) / world(Three.js実体)。
+      関数名やlocalStorageキー、イベント登録順を変えると保存データやUI遷移に影響するため、コメント追加以外の変更では必ず関連箇所を横断確認する。
+    */
+    /*
+      Three.jsはCDNから直接読み込む外部依存。ビルド工程がない前提なので、
+      バージョン変更は描画、影、CanvasTexture、BufferGeometry更新処理を一通り確認してから行う。
+    */
     import * as THREE from "https://unpkg.com/three@0.160.1/build/three.module.js";
 
+    /*
+      顔画像はdata URLとして内包している。外部ファイル化すると初回表示、オフライン起動、CanvasTexture生成タイミングが変わるため、
+      置き換える場合はcreateFaceTextureFromImage/addFaceMask/preloadCarrierFaceAssetまで確認する。
+    */
     const PLAYER_FACE_IMAGE = [
       "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALUAAADcCAYAAAA2qOA7AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6A",
       "AAdTAAAOpgAAA6mAAAF3CculE8AAAARGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAADoAEAAwAAAAEAAQAAoAIABAAAAAEAAAC1oAMABAAAAAEAAA",
@@ -6342,6 +6406,10 @@
       smallMonsterFound: "assets/small-monster-found.m4a"
     };
 
+    /*
+      音声・画像アセット参照の集約点。assets/配下のファイル名変更はここ、HTMLのfavicon/apple-touch-icon、
+      manifest.webmanifestのiconsを同時に確認する。
+    */
     const TITLE_BGM_ASSET = "assets/title-bgm.mp3";
     const GAME_BGM_TRACKS = ["gameBgm", "gameBgmAlt"];
     const CARRIER_FACE_HINT_IMAGE = "assets/carrier-face-hint.png";
@@ -6355,6 +6423,10 @@
     };
 
     const CONFIG = {
+      /*
+        ゲーム仕様値の中心。timeLimitSeconds/targetRingCount/rankingLimit/storageKey系はUI文言・保存データ・ランキング表示と連動する。
+        storageKeyを変更すると既存ユーザーの記録を読めなくなるため、変更時は移行処理をloadProgressState/loadRanking側に追加する。
+      */
       title: "わっかあつめ",
       timeLimitSeconds: 180,
       targetRingCount: 10,
@@ -6499,6 +6571,10 @@
     };
 
     const STAGE = {
+      /*
+        ステージ定義は描画、当たり判定、NPC経路、ミニマップ、リング配置候補の共通ソース。
+        roads/buildings/waterSegments/bridges/parks/rings/npcsの座標を変えたら、createPathGraph・canPlaceRingAt・updateMinimapも確認する。
+      */
       trampolines: [
         { x: 0, z: 0 }
       ],
@@ -6631,6 +6707,10 @@
     };
 
     const SURFACE_Y = {
+      /*
+        地面高さの描画優先度。リングや投げ物のY座標、道路/水面/公園の重なり回避に使うため、
+        見た目の微調整でもgetSurfaceYAt/getRingVisualY/throw系の接地を確認する。
+      */
       ground: 0,
       water: 0.04,
       road: 0.08,
@@ -6707,6 +6787,10 @@
     const NPC_HIT_SPEECH_TEXTURES = new Map();
     const NPC_SPEECH_BASE_SCALE = { x: 4.1, y: 1.76 };
     const DESTRUCTIBLE_THROW_PROFILES = {
+      /*
+        破壊可能オブジェクトの投げ演出プロファイル。registerDestructibleのkind文字列と一致している必要がある。
+        新しいkindを追加した場合はHIDEABLE_DESTRUCTIBLE_KINDS、getDestructionSound、getDestructionToastも確認する。
+      */
       "こーん": {
         style: "cylinder",
         speed: [8.8, 10.8],
@@ -6957,6 +7041,10 @@
     };
 
     const els = {
+      /*
+        DOM参照の単一表。ここでnullになるIDがあると初期化後のイベント登録や描画更新で落ちる。
+        HTML側のID変更時は、この一覧とsetupEvents/updateHud/renderResultを同時に更新する。
+      */
       gameRoot: document.getElementById("gameRoot"),
       canvas: document.getElementById("gameCanvas"),
       nightOverlay: document.getElementById("nightOverlay"),
@@ -7017,6 +7105,10 @@
     const nightOverlayContext = els.nightOverlay.getContext("2d");
 
     const game = {
+      /*
+        実行中のゲーム進行状態。保存対象と一時演出状態が混在しているため、
+        createProgressSnapshot/restoreProgressStateに含める値と、resetRun/showTitleで必ず初期化する値を分けて考える。
+      */
       screen: "title",
       mode: "normal",
       score: 0,
@@ -7071,6 +7163,10 @@
     };
 
     const input = {
+      /*
+        pointerIdを保持して多点タッチの取り違えを防ぐ。
+        ボタン操作のpointerdownとclickは二重発火対策としてlast*PressAtで連携しているため、片方だけ削らない。
+      */
       joystick: { active: false, pointerId: null, x: 0, y: 0 },
       camera: {
         active: false,
@@ -7094,6 +7190,10 @@
     };
 
     const sound = {
+      /*
+        ブラウザの自動再生制限に合わせ、音声はユーザー操作後にunlockAudioで初期化する。
+        BGMはWeb Audio buffer再生とHTMLAudioElementフォールバックが併存するため、停止/再開処理は両経路を確認する。
+      */
       context: null,
       master: null,
       assetMaster: null,
@@ -7130,6 +7230,10 @@
     };
 
     const world = {
+      /*
+        Three.jsの実体と物理/当たり判定用配列を保持する共有コンテナ。
+        sceneからremoveしただけではメモリ解放されないため、動的オブジェクト削除はdisposeObject3D/removeRingEntity/clearPickupEffectsの流儀に合わせる。
+      */
       scene: null,
       camera: null,
       renderer: null,
@@ -7203,6 +7307,10 @@
     init();
 
     function init() {
+      /*
+        初期化順は依存関係そのもの。Three.js -> アセット -> ステージ -> プレイヤー -> リング/NPC -> 空 -> イベント -> UIの順。
+        buildStage前に経路や当たり判定を使う処理を置くと、world.blockers/pathGraphが未完成になる。
+      */
       setupThree();
       preloadCarrierFaceAsset();
       buildStage();
@@ -7259,6 +7367,10 @@
     }
 
     function buildStage() {
+      /*
+        ステージ生成はSTAGE定義から描画物とworld.blockers/destructibles/pathGraphを構築する。
+        見た目用メッシュと当たり判定登録が別々の関数に分かれているため、追加物は「見えるが通れる/見えないが詰まる」を必ず確認する。
+      */
       const stage = new THREE.Group();
       stage.name = "dense-city-stage";
       world.blockers = [];
@@ -8341,12 +8453,20 @@
     }
 
     function addBlocker(x, z, w, d, type = "static", h = 999) {
+      /*
+        2D矩形当たり判定の登録点。プレイヤー、NPC、危険NPCの視線、リング配置安全判定がこの配列を参照する。
+        typeやhを変えると「隠れる」「通れる」「見つかる」の仕様が同時に変わる。
+      */
       const blocker = { x, z, w, d, h, type, active: true, destructibleId: null };
       world.blockers.push(blocker);
       return blocker;
     }
 
     function registerDestructible(object, x, z, w, d, kind = "object", options = {}) {
+      /*
+        破壊可能オブジェクトはメッシュ、blocker、保存ID、演出プロファイルが結びつく。
+        rebuildPathGraphOnDestroy付きのものは壊した後のNPC経路も変わるため、削除/復元/保存再開をまとめて確認する。
+      */
       if (!object) return null;
       const item = {
         id: `destructible-${world.destructibles.length + 1}`,
@@ -9614,6 +9734,10 @@
     }
 
     function createPathGraph() {
+      /*
+        NPC移動の経路グラフ。道路・路地・橋・公園通路とblockerの通行可否をもとに作る。
+        STAGE.roadsや破壊可能な障害物を変えた場合、通常NPCの巡回、危険NPCの追跡、車回避の全てに影響する。
+      */
       const graph = { nodes: [] };
       const nodeMap = new Map();
       const segments = STAGE.roads.map((road, index) => {
@@ -10085,6 +10209,10 @@
     }
 
     function createRings() {
+      /*
+        本番/練習共通のリング生成入口。通常リング、罠リング、キャリア由来リングがworld.ringsに混在する。
+        targetRingCountやtrapRingCountを変えたら、pickRingPositions/score表示/保存復元/クリア条件を確認する。
+      */
       if (world.ringGroup) {
         world.scene.remove(world.ringGroup);
       }
@@ -10597,6 +10725,10 @@
     }
 
     function createNpcs() {
+      /*
+        STAGE.npcsから通常NPCと危険NPCを作る。kindにより行動、顔画像、音、保存復元、車との相互作用が分岐する。
+        NPC追加時はidの一意性、routeの通行可能性、ミニマップ色、キャリア選出対象を確認する。
+      */
       if (world.npcGroup) {
         world.scene.remove(world.npcGroup);
       }
@@ -10930,6 +11062,10 @@
     }
 
     function resetNpcs() {
+      /*
+        新規開始時のNPC完全リセット。保存復元時はapplySavedNpcStateを使うため、ここだけ直すと再開データと差が出る。
+        NPC状態を追加したらresetNpcs/createProgressSnapshot/applySavedNpcStateを同時に見る。
+      */
       world.npcs.forEach((npc) => {
         if (npc.route.length === 0) return;
         const start = npc.route[0];
@@ -11021,6 +11157,10 @@
     }
 
     function setupEvents() {
+      /*
+        入力イベントの集約点。各ボタンは音声ロック解除、ハプティクス、画面遷移、保存削除をここから呼ぶ。
+        pointerdownとclickの両対応はスマホ操作の反応速度と互換性のためで、二重実行防止のlast*PressAtとセットで維持する。
+      */
       window.addEventListener("resize", scheduleViewportRefresh);
       window.addEventListener("orientationchange", () => {
         resetActiveControls();
@@ -11163,6 +11303,10 @@
     }
 
     function setupInputGuards() {
+      /*
+        ゲーム中の長押しメニュー、選択、通常キーボード操作を抑止する保護層。
+        入力フォームを追加する場合は、このcapture抑止で文字入力できなくならないか確認する。
+      */
       const suppressGameMenu = (event) => {
         if (!els.gameRoot.contains(event.target)) return;
         event.preventDefault();
@@ -11270,6 +11414,10 @@
     }
 
     function setupJoystick() {
+      /*
+        左スティック入力。input.joystickのx/yはupdatePlayerでカメラ向きに変換される。
+        スティックサイズや位置を変えたら、max計算とノブのtranslateが見た目と一致するか確認する。
+      */
       els.joystick.addEventListener("pointerdown", (event) => {
         if (game.screen !== "playing") return;
         event.preventDefault();
@@ -11317,6 +11465,10 @@
     }
 
     function setupCameraDrag() {
+      /*
+        右側の透明領域でカメラ回転、2本指でズームする。
+        cameraZoneの領域はアクションボタンと重ならない前提なので、CSS変更時はピンチ・ドラッグ・ボタン同時操作を確認する。
+      */
       const getPinchDistance = () => {
         const points = [...input.camera.pointers.values()];
         if (points.length < 2) return 0;
@@ -11435,6 +11587,10 @@
     }
 
     function unlockAudio() {
+      /*
+        音声初期化は必ずユーザー操作後に通す。タイトルBGM、ゲームBGM、効果音、雨音の共通入口。
+        ここを経由しない再生処理を追加すると、iOS/Safariで無音になりやすい。
+      */
       if (!sound.context) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return null;
@@ -12632,6 +12788,10 @@
     }
 
     function showRules(mode = "normal") {
+      /*
+        タイトルからカウントダウンへ進む前のルールモーダル。
+        modalOkButtonは通常ここからbeginCountdownへ進むが、練習リセット確認ではpendingModalActionで別処理になる。
+      */
       if (game.screen !== "title") return;
       setTitleModalUiSuppressed(false);
       game.mode = mode;
@@ -12714,6 +12874,10 @@
     }
 
     function beginCountdown() {
+      /*
+        新規開始の入口。既存の進行保存を消してから、HUD/操作UIを出し、BGM準備後にplayingへ遷移する。
+        「再開」はこの関数ではなくrestoreProgressStateを使うため、保存データを残す導線から呼ばない。
+      */
       if (game.screen === "countdown") return;
       clearCountdown();
       clearProgressState();
@@ -12799,6 +12963,10 @@
     }
 
     function resetRun() {
+      /*
+        本番/練習の新規ランを完全初期化する。
+        ここに追加した状態は、保存復元との差分が必要かを判断してrestoreProgressStateにも反映する。
+      */
       clearPendingResult();
       game.score = 0;
       game.remaining = game.mode === "practice" ? 0 : CONFIG.timeLimitSeconds;
@@ -12877,6 +13045,10 @@
     }
 
     function showTitle() {
+      /*
+        タイトルへ戻る共通処理。進行保存は呼び出し元の責務で、この関数は画面と一時演出を閉じることに集中している。
+        練習中断は先にsaveProgressStateしてからここへ来る。
+      */
       clearCountdown();
       clearPendingResult();
       stopGameBgm();
@@ -12906,6 +13078,10 @@
     }
 
     function tick(now) {
+      /*
+        メインループ。screenに応じて更新対象を絞り、最後に必ず描画と次フレーム予約を行う。
+        update順は衝突、タイマー、ヒント、保存、演出、カメラ/空/オーバーレイの依存を含むため、並べ替えは回帰リスクが高い。
+      */
       let dt = Math.min((now - game.lastTime) / 1000, 0.05);
       game.lastTime = now;
 
@@ -13654,6 +13830,10 @@
     }
 
     function updatePlayer(dt, now = performance.now()) {
+      /*
+        プレイヤー移動、走り、雨天スリップ、当たり判定、アニメーションの中心。
+        canOccupy/canOccupyStaticとNPCブロック判定に依存するため、地形やNPC半径を変えたら詰まり・すり抜けを確認する。
+      */
       const floorY = getPlayerFloorY();
 
       if (world.playerVy === undefined && world.player.position.y > floorY + 0.1) {
@@ -14018,6 +14198,10 @@
     }
 
     function updateNpcs(dt) {
+      /*
+        NPC更新の分岐点。通常NPC、キャリアNPC、危険NPC、衝突解決がここから連鎖する。
+        新しいNPC状態を追加したら、通常巡回と危険追跡の両方で停止/再開/保存復元を確認する。
+      */
       world.npcs.forEach((npc) => {
         if (npc.isDefeated) {
           applyWalkAnimation(npc.animatedParts, 0);
@@ -15495,6 +15679,10 @@
     }
 
     function updateDangerNpc(npc, dt) {
+      /*
+        危険NPCの状態機械。巡回、発見準備、追跡、見失い、練習中の無視時間が絡む。
+        FOVや距離設定を変えた場合は、視界メッシュ(updateDangerVision*)と実際の発見判定(canDangerNpcSeePlayer)を必ず合わせる。
+      */
       const now = performance.now();
 
       if (recoverDangerNpcFromStaticEmbedding(npc, now)) {
@@ -15838,6 +16026,10 @@
     }
 
     function updateTimer(dt) {
+      /*
+        本番は残り時間、練習は経過時間を進める。時間帯・天気・HUD更新の入口でもある。
+        timeLimitSecondsやpracticeTimePhaseSecondsを変えたら、空色、雨、ランキング時間表示を確認する。
+      */
       if (game.mode === "practice") {
         game.elapsed += dt;
         updateWeather(dt);
@@ -16114,6 +16306,10 @@
     }
 
     function updateRings(now) {
+      /*
+        リングの見た目、近接強調、罠リングの点滅、クリア判定に関わる。
+        collectedの扱いは保存復元とtryPickupに直結するため、表示だけの変更でもmesh.visibleとscore更新を確認する。
+      */
       const t = now * 0.003;
       const playerPosition = world.player?.position;
       const nightFactor = world.nightBlend || 0;
@@ -17470,6 +17666,10 @@
     }
 
     function tryPunch() {
+      /*
+        パンチ操作の入口。入力時点では予約し、processPendingPunchでhitDelay後に判定する。
+        UIのクールダウン表示、NPCダメージ、破壊可能オブジェクト、危険NPCへの優先度が結合している。
+      */
       const now = performance.now();
       if (!canUsePunch(now)) {
         playHaptic("miss");
@@ -18014,6 +18214,10 @@
     }
 
     function tryPickup() {
+      /*
+        リング取得の唯一の入口。通常リング、罠リング、キャリアリング、練習リスポーン、クリア判定がここに集まる。
+        scoreだけを直接増減させると保存/表示/キャリア発動条件がずれるため、この流れを経由する。
+      */
       if (game.screen !== "playing") return;
       updatePickupTarget();
       const target = game.nearestRing;
@@ -18414,6 +18618,10 @@
     }
 
     function updateCars(dt) {
+      /*
+        車はNPC回避、信号停止、プレイヤー衝突ペナルティをまとめて処理する。
+        STAGE.cars/trafficLights/NPC半径を変えたら、車線判定・クラクション猶予・sweptOverlapの接触判定を確認する。
+      */
       if (!world.player) return;
       const now = performance.now();
       const px = world.player.position.x;
@@ -18694,6 +18902,10 @@
     }
 
     function endGame(reason) {
+      /*
+        結果画面への唯一の終端。完了時は進行保存を消し、本番クリアのみタイムランキングへ、練習は個数ランキングへ保存する。
+        新しい終了理由を増やす場合はrenderResult/setResultMessage/playSoundも同時に更新する。
+      */
       if (game.screen === "result") return;
       clearCountdown();
       clearPendingResult();
@@ -18825,6 +19037,10 @@
     }
 
     function createProgressSnapshot() {
+      /*
+        進行保存のスキーマ定義。保存対象を増やす場合はprogressSaveVersionの扱いとnormalize/restoreの対応を必ず追加する。
+        world内の一時オブジェクトはID・座標・状態に正規化して保存し、Three.jsオブジェクト自体は保存しない。
+      */
       if (game.screen !== "playing" || !world.player) return null;
 
       const now = new Date();
@@ -18909,12 +19125,20 @@
     }
 
     function getProgressStorageKey(mode = game.mode) {
+      /*
+        本番と練習は別キーで保存する。練習データはタイトルの「つづきがあります」には出さない仕様。
+        キー統合や名称変更をする場合はloadProgressState内のlegacy移行も壊さない。
+      */
       return mode === "practice"
         ? CONFIG.practiceProgressStorageKey
         : CONFIG.progressStorageKey;
     }
 
     function normalizeProgressState(parsed, modeHint = null) {
+      /*
+        localStorage由来データの防御的な正規化層。
+        破損データや古いversionはここで落とすため、復元側で未検証値を直接信じない。
+      */
       if (!parsed || parsed.version !== CONFIG.progressSaveVersion) return null;
       if (!parsed.player || !Number.isFinite(parsed.player.x) || !Number.isFinite(parsed.player.z)) return null;
       if (!Array.isArray(parsed.rings) || !Array.isArray(parsed.npcs)) return null;
@@ -19287,6 +19511,10 @@
     }
 
     function restoreProgressState(progressSave) {
+      /*
+        保存再開の入口。resetRunで新規状態を作り直してから、保存値で上書きする二段構え。
+        復元順は「破壊物 -> リング -> プレイヤー/カメラ -> NPC -> キャリア/練習アイテム -> UI」で依存している。
+      */
       clearCountdown();
       clearPendingResult();
       stopTitleBgm(true);
@@ -19378,6 +19606,9 @@
     }
 
     function createRankingDate(now) {
+      /*
+        ランキングと進行保存で共通の表示日付。保存値は表示文字列なので、フォーマット変更は既存記録の見え方だけが混在する。
+      */
       return new Intl.DateTimeFormat("ja-JP", {
         month: "numeric",
         day: "numeric",
@@ -19467,6 +19698,10 @@
     }
 
     function updateHud() {
+      /*
+        HUD表示の同期点。本番は残り時間とx/10、練習は経過時間と個数だけを表示する。
+        game.modeやtargetRingCountを変えたら、ここ・renderResult・describeProgressSaveの表記を合わせる。
+      */
       const practice = game.mode === "practice";
       els.scoreText.textContent = practice ? `${game.score}こ` : `${game.score}/${CONFIG.targetRingCount}こ`;
       els.timeBox.setAttribute("aria-label", practice ? "れんしゅうじかん" : "のこりじかん");
@@ -19509,6 +19744,10 @@
     }
 
     function updateMinimapVisibility() {
+      /*
+        ミニマップはカウントダウン/プレイ中かつ横向きだけ表示する仕様。
+        縦向きでは操作領域が狭いため強制非表示にしており、CSSだけで表示させるとボタン配置と衝突する。
+      */
       const visible = game.isMinimapOpen &&
         (game.screen === "countdown" || game.screen === "playing") &&
         !game.isPortrait;
@@ -19586,6 +19825,10 @@
     }
 
     function updateNightOverlay() {
+      /*
+        夜・雨の2Dオーバーレイ。Three.jsの空を見せるため全面暗転はしない設計。
+        resizeRendererのDPR設定とsetTransformに依存するため、canvasサイズ変更時はぼけ・ずれ・雨密度を確認する。
+      */
       const canvas = els.nightOverlay;
       const ctx = nightOverlayContext;
       if (!canvas || !ctx) return;
@@ -19709,6 +19952,10 @@
     }
 
     function updateCamera() {
+      /*
+        カメラ追従は毎フレームの線形補間。resetRunでは補間を待たず初期位置へ直置きしている。
+        カメラ距離/ピッチ制限を変えたら、建物内へのめり込み、夜オーバーレイ投影、ミニマップ操作を確認する。
+      */
       const player = world.player.position;
       const horizontalDistance = Math.max(
         1.8,
@@ -19753,6 +20000,10 @@
     }
 
     function resizeRenderer() {
+      /*
+        WebGLと2D夜オーバーレイのサイズ同期点。devicePixelRatioは性能と画質のため1.5上限。
+        ここを変えたらスマホ回転、PWA全画面、visualViewport変化後のタッチ座標ずれを確認する。
+      */
       const width = Math.max(window.innerWidth, 1);
       const height = Math.max(window.innerHeight, 1);
       world.camera.aspect = width / height;
@@ -19790,6 +20041,10 @@
     }
 
     function updateOrientation() {
+      /*
+        縦向き警告とミニマップ非表示の制御。タイトル/結果では警告を出さず、プレイ導線だけで表示する。
+        CSSメディアクエリと役割が分かれているため、表示条件変更は両方を確認する。
+      */
       const portrait = window.matchMedia
         ? window.matchMedia("(orientation: portrait)").matches
         : (window.innerHeight > window.innerWidth);
