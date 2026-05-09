@@ -14441,7 +14441,11 @@
             }
             markNpcRetargeted(npc, now);
           }
-          advanceNpcRoute(npc);
+          const currentTime = performance.now();
+          if (currentTime - (npc.lastRouteAdvanceAt || 0) > 500) {
+            advanceNpcRoute(npc);
+            npc.lastRouteAdvanceAt = currentTime;
+          }
         } else if (blocker.type === "npc") {
           resolveNpcNpcCollision(npc, blocker.npc);
         } else if (blocker.type === "player" && npc.kind === "danger") {
@@ -14558,8 +14562,11 @@
             applyWalkAnimation(npc.animatedParts, 0);
             return false;
           }
-          npc.targetNode = chooseNextPathNode(npc, npc.pathNode, npc.previousPathNode, target);
-          markNpcRetargeted(npc, now);
+          if (now - (npc.lastRetargetAt || 0) > 500) {
+            npc.targetNode = chooseNextPathNode(npc, npc.pathNode, npc.previousPathNode, target);
+            markNpcRetargeted(npc, now);
+            npc.lastRetargetAt = now;
+          }
         } else if (blocker.type === "npc") {
           resolveNpcNpcCollision(npc, blocker.npc);
         } else if (blocker.type === "player" && npc.kind === "danger") {
@@ -15243,10 +15250,6 @@
       if (!blockerX) {
         npc.group.position.x = nextX;
         actualMoved = true;
-      } else if (blockerX.type === "static") {
-        redirectDangerNpcAfterPatrolBlock(npc, now);
-        applyWalkAnimation(npc.animatedParts, 0);
-        return false;
       } else if (blockerX.type === "npc") {
         resolveNpcNpcCollision(npc, blockerX.npc);
       } else if (blockerX.type === "player") {
@@ -15258,10 +15261,6 @@
       if (!blockerZ) {
         npc.group.position.z = nextZ;
         actualMoved = true;
-      } else if (blockerZ.type === "static") {
-        redirectDangerNpcAfterPatrolBlock(npc, now);
-        applyWalkAnimation(npc.animatedParts, 0);
-        return false;
       } else if (blockerZ.type === "npc") {
         resolveNpcNpcCollision(npc, blockerZ.npc);
       } else if (blockerZ.type === "player") {
@@ -15275,6 +15274,9 @@
         applyWalkAnimation(npc.animatedParts, swing);
         return true;
       } else {
+        if (blockerX?.type === "static" || blockerZ?.type === "static") {
+          redirectDangerNpcAfterPatrolBlock(npc, now);
+        }
         applyWalkAnimation(npc.animatedParts, 0);
         // Stuck detection will handle skipping waypoints if truly stuck
         return false;
@@ -16444,25 +16446,26 @@
       group.name = "pickup-effect";
       group.position.set(x, 0.2, z);
 
-      const ringMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffdf4a,
-        transparent: true,
-        opacity: 0.86,
-        depthWrite: false
-      });
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.34,
-        depthWrite: false
-      });
+      if (!world._sharedPickupGeo) {
+        world._sharedPickupGeo = {
+          ring: new THREE.TorusGeometry(0.18, 0.018, 8, 28),
+          glow: new THREE.CircleGeometry(0.34, 28),
+          matRing: new THREE.MeshBasicMaterial({ color: 0xffdf4a, transparent: true, depthWrite: false }),
+          matGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })
+        };
+      }
 
-      const burstRing = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.018, 8, 28), ringMaterial);
+      const ringMaterial = world._sharedPickupGeo.matRing.clone();
+      ringMaterial.opacity = 0.86;
+      const glowMaterial = world._sharedPickupGeo.matGlow.clone();
+      glowMaterial.opacity = 0.34;
+
+      const burstRing = new THREE.Mesh(world._sharedPickupGeo.ring, ringMaterial);
       burstRing.rotation.x = Math.PI / 2;
       burstRing.renderOrder = 18;
       group.add(burstRing);
 
-      const glow = new THREE.Mesh(new THREE.CircleGeometry(0.34, 28), glowMaterial);
+      const glow = new THREE.Mesh(world._sharedPickupGeo.glow, glowMaterial);
       glow.rotation.x = -Math.PI / 2;
       glow.position.y = -0.025;
       glow.renderOrder = 17;
@@ -16579,60 +16582,55 @@
       group.name = "punch-hit";
       group.position.set(x, 1.05, z);
 
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xffe27a,
-        transparent: true,
-        opacity: 0.92,
-        depthWrite: false
-      });
-      const burst = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), material);
+      if (!world._sharedPunchHitGeo) {
+        world._sharedPunchHitGeo = {
+          sphere: new THREE.SphereGeometry(0.2, 14, 10),
+          ring: new THREE.RingGeometry(0.22, 0.48, 32),
+          streak: new THREE.PlaneGeometry(0.32, 1.62),
+          slash: new THREE.PlaneGeometry(0.14, 1.05),
+          spark: new THREE.BoxGeometry(0.065, 0.065, 0.42),
+          matSphere: new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, depthWrite: false }),
+          matRing: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
+          matStreak: new THREE.MeshBasicMaterial({ color: 0xfff0a5, transparent: true, depthWrite: false }),
+          matSlash: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
+          matSpark: new THREE.MeshBasicMaterial({ color: 0xffc342, transparent: true, depthWrite: false })
+        };
+      }
+
+      const material = world._sharedPunchHitGeo.matSphere.clone();
+      material.opacity = 0.92;
+      const burst = new THREE.Mesh(world._sharedPunchHitGeo.sphere, material);
       burst.renderOrder = 24;
       group.add(burst);
 
-      const ringMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.72,
-        depthWrite: false
-      });
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.48, 32), ringMaterial);
+      const ringMaterial = world._sharedPunchHitGeo.matRing.clone();
+      ringMaterial.opacity = 0.72;
+      const ring = new THREE.Mesh(world._sharedPunchHitGeo.ring, ringMaterial);
       ring.rotation.set(Math.PI / 2, 0, -angle);
       ring.renderOrder = 25;
       group.add(ring);
 
-      const streakMaterial = new THREE.MeshBasicMaterial({
-        color: 0xfff0a5,
-        transparent: true,
-        opacity: 0.68,
-        depthWrite: false
-      });
-      const streak = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 1.62), streakMaterial);
+      const streakMaterial = world._sharedPunchHitGeo.matStreak.clone();
+      streakMaterial.opacity = 0.68;
+      const streak = new THREE.Mesh(world._sharedPunchHitGeo.streak, streakMaterial);
       streak.position.set(forward.x * -0.48, 0.02, forward.z * -0.48);
       streak.rotation.set(Math.PI / 2, 0, -angle);
       streak.renderOrder = 23;
       group.add(streak);
 
-      const slashMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.62,
-        depthWrite: false
-      });
-      const slash = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 1.05), slashMaterial);
+      const slashMaterial = world._sharedPunchHitGeo.matSlash.clone();
+      slashMaterial.opacity = 0.62;
+      const slash = new THREE.Mesh(world._sharedPunchHitGeo.slash, slashMaterial);
       slash.position.set(forward.x * 0.08, 0.03, forward.z * 0.08);
       slash.rotation.set(Math.PI / 2, 0, -angle + 0.68 * (game.punchSide || 1));
       slash.renderOrder = 27;
       group.add(slash);
 
       const sparks = [];
-      const sparkMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffc342,
-        transparent: true,
-        opacity: 0.86,
-        depthWrite: false
-      });
+      const sparkMaterial = world._sharedPunchHitGeo.matSpark.clone();
+      sparkMaterial.opacity = 0.86;
       for (let i = 0; i < CONFIG.effectPunchSparkCount; i += 1) {
-        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.065, 0.42), sparkMaterial);
+        const spark = new THREE.Mesh(world._sharedPunchHitGeo.spark, sparkMaterial);
         const sparkAngle = angle + randomBetween(-0.95, 0.95);
         spark.rotation.y = sparkAngle;
         spark.renderOrder = 26;
