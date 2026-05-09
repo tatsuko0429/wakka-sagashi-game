@@ -14550,13 +14550,43 @@
       const nx = dx / distance;
       const nz = dz / distance;
       const step = Math.min(speed * dt, distance);
-      const nextX = npc.group.position.x + nx * step;
-      const nextZ = npc.group.position.z + nz * step;
       orientNpcForMotion(npc, nx, nz, dt);
 
-      const blocker = getNpcBlocker(nextX, nextZ, npc);
-      if (blocker && !(blocker.type === "npc" && isMovingAwayFromNpc(nextX, nextZ, npc, blocker.npc))) {
-        if (blocker.type === "static") {
+      let actualMoved = false;
+      const nextX = npc.group.position.x + nx * step;
+      const nextZ = npc.group.position.z + nz * step;
+
+      const blockerX = getNpcBlocker(nextX, npc.group.position.z, npc);
+      if (!blockerX || (blockerX.type === "npc" && isMovingAwayFromNpc(nextX, npc.group.position.z, npc, blockerX.npc))) {
+        npc.group.position.x = nextX;
+        actualMoved = true;
+      } else if (blockerX.type === "npc") {
+        resolveNpcNpcCollision(npc, blockerX.npc);
+      } else if (blockerX.type === "player" && npc.kind === "danger") {
+        handleDangerNpcTouchPlayer(npc);
+      } else if (blockerX.type === "player") {
+        turnNpcAround(npc);
+      }
+
+      const blockerZ = getNpcBlocker(npc.group.position.x, nextZ, npc);
+      if (!blockerZ || (blockerZ.type === "npc" && isMovingAwayFromNpc(npc.group.position.x, nextZ, npc, blockerZ.npc))) {
+        npc.group.position.z = nextZ;
+        actualMoved = true;
+      } else if (blockerZ.type === "npc") {
+        resolveNpcNpcCollision(npc, blockerZ.npc);
+      } else if (blockerZ.type === "player" && npc.kind === "danger") {
+        handleDangerNpcTouchPlayer(npc);
+      } else if (blockerZ.type === "player") {
+        turnNpcAround(npc);
+      }
+
+      if (actualMoved) {
+        npc.walkTime += dt * speed * 4.2;
+        const swing = Math.sin(npc.walkTime + npc.phase * Math.PI * 2) * 0.28;
+        applyWalkAnimation(npc.animatedParts, swing);
+        return true;
+      } else {
+        if (blockerX?.type === "static" || blockerZ?.type === "static") {
           const now = performance.now();
           if (npc.kind === "danger" && !canRetargetNpc(npc, now)) {
             applyWalkAnimation(npc.animatedParts, 0);
@@ -14567,23 +14597,10 @@
             markNpcRetargeted(npc, now);
             npc.lastRetargetAt = now;
           }
-        } else if (blocker.type === "npc") {
-          resolveNpcNpcCollision(npc, blocker.npc);
-        } else if (blocker.type === "player" && npc.kind === "danger") {
-          handleDangerNpcTouchPlayer(npc);
-        } else if (blocker.type === "player") {
-          turnNpcAround(npc);
         }
         applyWalkAnimation(npc.animatedParts, 0);
         return false;
       }
-
-      npc.group.position.x = nextX;
-      npc.group.position.z = nextZ;
-      npc.walkTime += dt * speed * 4.2;
-      const swing = Math.sin(npc.walkTime + npc.phase * Math.PI * 2) * 0.28;
-      applyWalkAnimation(npc.animatedParts, swing);
-      return true;
     }
 
     function isWalkerNpcPaused(npc, now = performance.now()) {
@@ -15886,16 +15903,41 @@
       const nx = dx / distance;
       const nz = dz / distance;
       const step = Math.min(npc.chaseSpeed * dt, distance);
-      const nextX = npc.group.position.x + nx * step;
-      const nextZ = npc.group.position.z + nz * step;
       orientNpcForMotion(npc, nx, nz, dt);
 
-      const otherNpc = findBlockingNpc(nextX, nextZ, npc.radius, npc);
-      const blockedByNpc = otherNpc && !isMovingAwayFromNpc(nextX, nextZ, npc, otherNpc);
-      if (!canOccupyStatic(nextX, nextZ, npc.radius) || blockedByNpc) {
-        if (blockedByNpc) {
-          resolveNpcNpcCollision(npc, otherNpc);
-        } else {
+      let actualMoved = false;
+      const nextX = npc.group.position.x + nx * step;
+      const nextZ = npc.group.position.z + nz * step;
+
+      const blockerX = getNpcBlocker(nextX, npc.group.position.z, npc);
+      if (!blockerX || (blockerX.type === "npc" && isMovingAwayFromNpc(nextX, npc.group.position.z, npc, blockerX.npc))) {
+        npc.group.position.x = nextX;
+        actualMoved = true;
+      } else if (blockerX.type === "npc") {
+        resolveNpcNpcCollision(npc, blockerX.npc);
+      } else if (blockerX.type === "player" && options.canCatchPlayer) {
+        handleDangerNpcTouchPlayer(npc);
+      }
+
+      const blockerZ = getNpcBlocker(npc.group.position.x, nextZ, npc);
+      if (!blockerZ || (blockerZ.type === "npc" && isMovingAwayFromNpc(npc.group.position.x, nextZ, npc, blockerZ.npc))) {
+        npc.group.position.z = nextZ;
+        actualMoved = true;
+      } else if (blockerZ.type === "npc") {
+        resolveNpcNpcCollision(npc, blockerZ.npc);
+      } else if (blockerZ.type === "player" && options.canCatchPlayer) {
+        handleDangerNpcTouchPlayer(npc);
+      }
+
+      if (actualMoved) {
+        npc.walkTime += dt * npc.chaseSpeed * 4.2;
+        const swing = Math.sin(npc.walkTime + npc.phase * Math.PI * 2) * 0.28;
+        applyWalkAnimation(npc.animatedParts, swing);
+        return "moved";
+      } else {
+        const isStaticBlock = blockerX?.type === "static" || blockerZ?.type === "static";
+        const isNpcBlock = blockerX?.type === "npc" || blockerZ?.type === "npc";
+        if (isStaticBlock || isNpcBlock) {
           const now = performance.now();
           if (retargetNpcToward(npc, targetX, targetZ, null, { force: true })) {
             npc.chasePathUntil = now + CONFIG.dangerNpcPathChaseMs;
@@ -15911,13 +15953,6 @@
         applyWalkAnimation(npc.animatedParts, 0);
         return "blocked";
       }
-
-      npc.group.position.x = nextX;
-      npc.group.position.z = nextZ;
-      npc.walkTime += dt * npc.chaseSpeed * 4.2;
-      const swing = Math.sin(npc.walkTime + npc.phase * Math.PI * 2) * 0.28;
-      applyWalkAnimation(npc.animatedParts, swing);
-      return "moved";
     }
 
     function checkDangerNpcContact() {
