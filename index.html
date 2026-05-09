@@ -14221,7 +14221,7 @@
       }
 
       const moved = Math.sqrt((
-        npc.group.position.x - (npc.lastProgressX ?? npc.group.position.x)) ** 2 + (npc.group.position.z - (npc.lastProgressZ ?? npc.group.position.z) ** 2)
+        npc.group.position.x - (npc.lastProgressX ?? npc.group.position.x)) ** 2 + (npc.group.position.z - (npc.lastProgressZ ?? npc.group.position.z)) ** 2
       );
       if (moved >= CONFIG.npcProgressMinDistance) {
         markNpcProgress(npc, now);
