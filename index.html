@@ -9823,7 +9823,7 @@
 
     function connectPathNodes(a, b) {
       if (a === b) return;
-      const distance = Math.hypot(a.x - b.x, a.z - b.z);
+      const distance = Math.sqrt((a.x - b.x) ** 2 + (a.z - b.z) ** 2);
       if (distance < 0.4) return;
       if (!isPathEdgePassable(a, b, CONFIG.npcRadius)) return;
       if (!a.neighbors.some((edge) => edge.node === b)) {
@@ -9835,7 +9835,7 @@
     }
 
     function isPathEdgePassable(a, b, radius) {
-      const distance = Math.hypot(a.x - b.x, a.z - b.z);
+      const distance = Math.sqrt((a.x - b.x) ** 2 + (a.z - b.z) ** 2);
       const steps = Math.max(1, Math.ceil(distance / 1.5));
       for (let i = 0; i <= steps; i += 1) {
         const ratio = i / steps;
@@ -10444,7 +10444,7 @@
         .sort((a, b) => b.score - a.score)
         .forEach((point) => {
           if (positions.length >= required) return;
-          const tooClose = positions.some((p) => Math.hypot(p.x - point.x, p.z - point.z) < 1.4);
+          const tooClose = positions.some((p) => Math.sqrt((p.x - point.x) ** 2 + (p.z - point.z) ** 2) < 1.4);
           if (!tooClose) positions.push({ x: point.x, z: point.z });
         });
 
@@ -10456,7 +10456,7 @@
         for (const point of candidates) {
           if (positions.length >= required) break;
           if (!canPlaceRingAt(point.x, point.z)) continue;
-          const tooClose = positions.some((p) => Math.hypot(p.x - point.x, p.z - point.z) < 1.4);
+          const tooClose = positions.some((p) => Math.sqrt((p.x - point.x) ** 2 + (p.z - point.z) ** 2) < 1.4);
           if (tooClose) continue;
           positions.push({ x: point.x, z: point.z });
         }
@@ -10482,15 +10482,14 @@
           if (!fallback) fallback = position;
 
           const overlapsRing = activeRings.some((ring) => (
-            Math.hypot(ring.x - position.x, ring.z - position.z) < 1.8
+            Math.sqrt((ring.x - position.x) ** 2 + (ring.z - position.z) ** 2) < 1.8
           ));
           if (overlapsRing) continue;
 
           if (world.player) {
-            const playerDistance = Math.hypot(
-              world.player.position.x - position.x,
-              world.player.position.z - position.z
-            );
+            const playerDistance = Math.sqrt((
+              world.player.position.x - position.x) ** 2 + (world.player.position.z - position.z
+            ) ** 2);
             if (playerDistance < CONFIG.pickupRange + 2.8) continue;
           }
 
@@ -10534,12 +10533,12 @@
         const start = spec.route?.[0];
         if (!start) return false;
         const minDistance = spec.kind === "danger" ? 11 : 3;
-        return Math.hypot(x - start[0], z - start[1]) < minDistance;
+        return Math.sqrt((x - start[0]) ** 2 + (z - start[1]) ** 2) < minDistance;
       });
       if (nearNpcStart) return true;
 
       return world.rings.some((ring) => (
-        !ring.collected && Math.hypot(x - ring.x, z - ring.z) < CONFIG.pickupRange + 1.25
+        !ring.collected && Math.sqrt((x - ring.x) ** 2 + (z - ring.z) ** 2) < CONFIG.pickupRange + 1.25
       ));
     }
 
@@ -10587,14 +10586,13 @@
           if (!canPlaceRingAt(position.x, position.z)) continue;
           if (!fallback) fallback = position;
 
-          const playerDistance = Math.hypot(
-            world.player.position.x - position.x,
-            world.player.position.z - position.z
-          );
+          const playerDistance = Math.sqrt((
+            world.player.position.x - position.x) ** 2 + (world.player.position.z - position.z
+          ) ** 2);
           if (playerDistance < CONFIG.pickupRange + 2.4) continue;
 
           const overlapsRing = otherRings.some((ring) => (
-            Math.hypot(ring.x - position.x, ring.z - position.z) < 1.5
+            Math.sqrt((ring.x - position.x) ** 2 + (ring.z - position.z) ** 2) < 1.5
           ));
           if (!overlapsRing) return position;
         }
@@ -11453,7 +11451,7 @@
       const max = radius - rect.width * 0.26;
       let dx = event.clientX - centerX;
       let dy = event.clientY - centerY;
-      const length = Math.hypot(dx, dy);
+      const length = Math.sqrt((dx) ** 2 + (dy) ** 2);
       if (length > max) {
         dx = (dx / length) * max;
         dy = (dy / length) * max;
@@ -11472,7 +11470,7 @@
       const getPinchDistance = () => {
         const points = [...input.camera.pointers.values()];
         if (points.length < 2) return 0;
-        return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        return Math.sqrt((points[0].x - points[1].x) ** 2 + (points[0].y - points[1].y) ** 2);
       };
 
       els.cameraZone.addEventListener("pointerdown", (event) => {
@@ -12308,10 +12306,9 @@
       let intensity = 0;
       world.npcs.forEach((npc) => {
         if (npc.kind !== "danger" || isDangerNpcIgnoringPlayer(npc)) return;
-        const distance = Math.hypot(
-          world.player.position.x - npc.group.position.x,
-          world.player.position.z - npc.group.position.z
-        );
+        const distance = Math.sqrt((
+          world.player.position.x - npc.group.position.x) ** 2 + (world.player.position.z - npc.group.position.z
+        ) ** 2);
         if (distance > CONFIG.monsterFootstepRange) return;
 
         const rangeRate = THREE.MathUtils.clamp(1 - distance / CONFIG.monsterFootstepRange, 0, 1);
@@ -12428,10 +12425,9 @@
       let intensity = 0;
       world.npcs.forEach((npc) => {
         if (npc.kind !== "danger" || isDangerNpcIgnoringPlayer(npc)) return;
-        const distance = Math.hypot(
-          world.player.position.x - npc.group.position.x,
-          world.player.position.z - npc.group.position.z
-        );
+        const distance = Math.sqrt((
+          world.player.position.x - npc.group.position.x) ** 2 + (world.player.position.z - npc.group.position.z
+        ) ** 2);
         if (distance > CONFIG.dangerProximityRange) return;
         const rangeRate = THREE.MathUtils.clamp(1 - distance / CONFIG.dangerProximityRange, 0, 1);
         let current = rangeRate * rangeRate * (3 - 2 * rangeRate);
@@ -12946,8 +12942,8 @@
         const rx = road.x + (Math.random() * road.w - road.w / 2) * 0.8;
         const rz = road.z + (Math.random() * road.d - road.d / 2) * 0.8;
         
-        const safeFromRings = !world.rings.some((r) => Math.hypot(r.x - rx, r.z - rz) < 4.0);
-        const safeFromStart = Math.hypot(STAGE.start.x - rx, STAGE.start.z - rz) > 10;
+        const safeFromRings = !world.rings.some((r) => Math.sqrt((r.x - rx) ** 2 + (r.z - rz) ** 2) < 4.0);
+        const safeFromStart = Math.sqrt((STAGE.start.x - rx) ** 2 + (STAGE.start.z - rz) ** 2) > 10;
         const safeFromBuildings = canOccupyStatic(rx, rz, 1.6, 0);
         
         if (safeFromRings && safeFromStart && safeFromBuildings) {
@@ -13152,7 +13148,7 @@
       updateTrafficLights(now);
       updateNightGuideLights(now);
       updateNightOverlay();
-      updateMinimap();
+      updateMinimap(now);
       world.renderer.render(world.scene, world.camera);
       requestAnimationFrame(tick);
     }
@@ -13483,7 +13479,7 @@
 
     function getSkyOrbOcclusion(localPosition) {
       if (!world.camera || !localPosition) return 0;
-      const horizontalDistance = Math.hypot(localPosition.x, localPosition.z);
+      const horizontalDistance = Math.sqrt((localPosition.x) ** 2 + (localPosition.z) ** 2);
       if (horizontalDistance < 0.001) return 0;
 
       const cameraX = world.camera.position.x;
@@ -13854,7 +13850,7 @@
         const playerZ = world.player.position.z;
         for (const dest of world.destructibles) {
           if (dest.type === "trampoline" && !dest.destroyed) {
-            if (Math.hypot(playerX - dest.x, playerZ - dest.z) < 1.3) {
+            if (Math.sqrt((playerX - dest.x) ** 2 + (playerZ - dest.z) ** 2) < 1.3) {
               world.playerVy = 26.0;
               playSound("jump");
               spawnGroundBounceEffect(playerX, playerZ, 1.2, floorY + 0.026);
@@ -13931,7 +13927,7 @@
 
     function hasMoveInput() {
       const input = getMoveInput();
-      return Math.hypot(input.x, input.y) > 0.04;
+      return Math.sqrt((input.x) ** 2 + (input.y) ** 2) > 0.04;
     }
 
     function movePlayerWithCollision(velocity, dt) {
@@ -14189,7 +14185,7 @@
       let x = input.joystick.x;
       let y = input.joystick.y;
 
-      const length = Math.hypot(x, y);
+      const length = Math.sqrt((x) ** 2 + (y) ** 2);
       if (length > 1) {
         x /= length;
         y /= length;
@@ -14224,9 +14220,8 @@
         return;
       }
 
-      const moved = Math.hypot(
-        npc.group.position.x - (npc.lastProgressX ?? npc.group.position.x),
-        npc.group.position.z - (npc.lastProgressZ ?? npc.group.position.z)
+      const moved = Math.sqrt((
+        npc.group.position.x - (npc.lastProgressX ?? npc.group.position.x)) ** 2 + (npc.group.position.z - (npc.lastProgressZ ?? npc.group.position.z) ** 2)
       );
       if (moved >= CONFIG.npcProgressMinDistance) {
         markNpcProgress(npc, now);
@@ -14354,10 +14349,9 @@
       npc.targetNode = null;
       npc.chasePathUntil = 0;
 
-      const playerDistance = Math.hypot(
-        world.player.position.x - npc.group.position.x,
-        world.player.position.z - npc.group.position.z
-      );
+      const playerDistance = Math.sqrt((
+        world.player.position.x - npc.group.position.x) ** 2 + (world.player.position.z - npc.group.position.z
+      ) ** 2);
       if (shouldNpcCheckPlayerBlock(npc) && playerDistance <= npc.contactRange + 0.08) {
         handleDangerNpcTouchPlayer(npc);
         markNpcProgress(npc, now);
@@ -14417,14 +14411,14 @@
       let target = npc.route[npc.routeIndex];
       let dx = target.x - npc.group.position.x;
       let dz = target.z - npc.group.position.z;
-      let distance = Math.hypot(dx, dz);
+      let distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
 
       if (distance < 0.08) {
         npc.routeIndex = (npc.routeIndex + 1) % npc.route.length;
         target = npc.route[npc.routeIndex];
         dx = target.x - npc.group.position.x;
         dz = target.z - npc.group.position.z;
-        distance = Math.hypot(dx, dz);
+        distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       }
 
       if (distance < 0.001) return;
@@ -14475,7 +14469,7 @@
 
       const dx = world.player.position.x - npc.group.position.x;
       const dz = world.player.position.z - npc.group.position.z;
-      const playerDistance = Math.hypot(dx, dz);
+      const playerDistance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       const canSeePlayer = !isLineBlocked(
         npc.group.position.x,
         npc.group.position.z,
@@ -14526,7 +14520,7 @@
       if (!target) return false;
       let dx = target.x - npc.group.position.x;
       let dz = target.z - npc.group.position.z;
-      let distance = Math.hypot(dx, dz);
+      let distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
 
       if (distance < 0.08) {
         npc.previousPathNode = npc.pathNode;
@@ -14544,7 +14538,7 @@
         }
         dx = target.x - npc.group.position.x;
         dz = target.z - npc.group.position.z;
-        distance = Math.hypot(dx, dz);
+        distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       }
 
       if (distance < 0.001) return false;
@@ -14616,7 +14610,7 @@
       if (!node) return null;
       const x = node.x;
       const z = node.z;
-      const lifeSpot = STAGE.lifeSpots.find((spot) => Math.hypot(x - spot.x, z - spot.z) < spot.radius);
+      const lifeSpot = STAGE.lifeSpots.find((spot) => Math.sqrt((x - spot.x) ** 2 + (z - spot.z) ** 2) < spot.radius);
       if (lifeSpot) {
         return {
           chance: lifeSpot.chance,
@@ -14634,12 +14628,12 @@
         [-39, -5], [2, -5], [39, -5],
         [-39, 37], [2, 37], [39, 37]
       ];
-      const nearCrosswalk = crosswalkPoints.some(([px, pz]) => Math.hypot(x - px, z - pz) < 1.8);
+      const nearCrosswalk = crosswalkPoints.some(([px, pz]) => Math.sqrt((x - px) ** 2 + (z - pz) ** 2) < 1.8);
       if (nearCrosswalk) {
         return { chance: 0.58, minMs: 520, maxMs: 1180 };
       }
 
-      const nearBridge = STAGE.bridges.some((bridge) => Math.hypot(x - bridge.x, z - bridge.z) < 3.2);
+      const nearBridge = STAGE.bridges.some((bridge) => Math.sqrt((x - bridge.x) ** 2 + (z - bridge.z) ** 2) < 3.2);
       if (nearBridge) {
         return { chance: 0.28, minMs: 320, maxMs: 760 };
       }
@@ -14663,7 +14657,7 @@
     function distanceToRect(x, z, rect) {
       const dx = Math.max(0, Math.abs(x - rect.x) - rect.w / 2);
       const dz = Math.max(0, Math.abs(z - rect.z) - rect.d / 2);
-      return Math.hypot(dx, dz);
+      return Math.sqrt((dx) ** 2 + (dz) ** 2);
     }
 
     function isPointInsideRect(x, z, rect, padding = 0) {
@@ -14739,7 +14733,7 @@
         if (!canOccupyStatic(node.x, node.z, radius)) return;
         if (!node.neighbors.some((edge) => isPathEdgePassable(node, edge.node, radius))) return;
         if (options.avoidNpcs && findBlockingNpc(node.x, node.z, radius, options.ignoreNpc || null)) return;
-        const distance = Math.hypot(x - node.x, z - node.z);
+        const distance = Math.sqrt((x - node.x) ** 2 + (z - node.z) ** 2);
         if (distance < nearestDistance) {
           nearest = node;
           nearestDistance = distance;
@@ -14940,7 +14934,7 @@
           const candidateX = x + Math.cos(angle) * distance;
           const candidateZ = z + Math.sin(angle) * distance;
           if (!isCandidateClear(candidateX, candidateZ)) continue;
-          const score = Math.hypot(candidateX - x, candidateZ - z);
+          const score = Math.sqrt((candidateX - x) ** 2 + (candidateZ - z) ** 2);
           if (score < bestScore) {
             bestScore = score;
             bestCandidate = { x: candidateX, z: candidateZ };
@@ -15017,7 +15011,7 @@
       if (!npc || !target) return false;
       const startX = npc.group.position.x;
       const startZ = npc.group.position.z;
-      const distance = Math.hypot(target.x - startX, target.z - startZ);
+      const distance = Math.sqrt((target.x - startX) ** 2 + (target.z - startZ) ** 2);
       if (distance < 0.001) return true;
 
       const radius = npc.radius || CONFIG.npcRadius;
@@ -15110,10 +15104,9 @@
       npc.route.forEach((_, index) => {
         const point = getResolvedDangerNpcWaypoint(npc, index);
         if (!point) return;
-        const distance = Math.hypot(
-          point.x - npc.group.position.x,
-          point.z - npc.group.position.z
-        );
+        const distance = Math.sqrt((
+          point.x - npc.group.position.x) ** 2 + (point.z - npc.group.position.z
+        ) ** 2);
         if (distance < nearestDistance) {
           nearestDistance = distance;
           nearestIndex = index;
@@ -15129,10 +15122,9 @@
       if (nearestIndex < 0) return false;
       const nearestPoint = getResolvedDangerNpcWaypoint(npc, nearestIndex);
       if (!nearestPoint) return false;
-      const nearestDistance = Math.hypot(
-        nearestPoint.x - npc.group.position.x,
-        nearestPoint.z - npc.group.position.z
-      );
+      const nearestDistance = Math.sqrt((
+        nearestPoint.x - npc.group.position.x) ** 2 + (nearestPoint.z - npc.group.position.z
+      ) ** 2);
       let targetIndex = nearestIndex;
       if (nearestDistance < 0.12 && npc.route.length > 1) {
         targetIndex = (targetIndex + 1) % npc.route.length;
@@ -15147,19 +15139,17 @@
         targetIndex = candidateIndexes.sort((indexA, indexB) => {
           const pointA = getResolvedDangerNpcWaypoint(npc, indexA) || npc.route[indexA];
           const pointB = getResolvedDangerNpcWaypoint(npc, indexB) || npc.route[indexB];
-          const currentDistanceA = Math.hypot(
-            pointA.x - npc.group.position.x,
-            pointA.z - npc.group.position.z
-          );
-          const currentDistanceB = Math.hypot(
-            pointB.x - npc.group.position.x,
-            pointB.z - npc.group.position.z
-          );
+          const currentDistanceA = Math.sqrt((
+            pointA.x - npc.group.position.x) ** 2 + (pointA.z - npc.group.position.z
+          ) ** 2);
+          const currentDistanceB = Math.sqrt((
+            pointB.x - npc.group.position.x) ** 2 + (pointB.z - npc.group.position.z
+          ) ** 2);
           if (Math.abs(currentDistanceA - currentDistanceB) > 0.2) {
             return currentDistanceA - currentDistanceB;
           }
-          const awayDistanceA = Math.hypot(pointA.x - options.awayFromX, pointA.z - options.awayFromZ);
-          const awayDistanceB = Math.hypot(pointB.x - options.awayFromX, pointB.z - options.awayFromZ);
+          const awayDistanceA = Math.sqrt((pointA.x - options.awayFromX) ** 2 + (pointA.z - options.awayFromZ) ** 2);
+          const awayDistanceB = Math.sqrt((pointB.x - options.awayFromX) ** 2 + (pointB.z - options.awayFromZ) ** 2);
           return awayDistanceB - awayDistanceA;
         })[0];
       }
@@ -15228,7 +15218,7 @@
 
       const dx = target.x - npc.group.position.x;
       const dz = target.z - npc.group.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
 
       if (distance < 0.22) { // 判定を少し広くしてスムーズに次へ
         target = advanceDangerNpcPatrolWaypoint(npc);
@@ -15323,17 +15313,16 @@
         return false;
       }
 
-      const playerDistance = Math.hypot(
-        world.player.position.x - npc.group.position.x,
-        world.player.position.z - npc.group.position.z
-      );
+      const playerDistance = Math.sqrt((
+        world.player.position.x - npc.group.position.x) ** 2 + (world.player.position.z - npc.group.position.z
+      ) ** 2);
       return playerDistance <= CONFIG.dangerNpcChaseMemoryRange;
     }
 
     function getDistanceToRectEdge(x, z, rect) {
       const dx = Math.max(Math.abs(x - rect.x) - rect.w / 2, 0);
       const dz = Math.max(Math.abs(z - rect.z) - rect.d / 2, 0);
-      return Math.hypot(dx, dz);
+      return Math.sqrt((dx) ** 2 + (dz) ** 2);
     }
 
     function isPlayerUsingCoverAgainstDanger(npc) {
@@ -15476,8 +15465,8 @@
         .map((edge) => edge.node)
         .filter((node) => isReachablePathNode(currentNode, node, radius, blockedNode))
         .sort((a, b) => {
-          const distanceA = Math.hypot(a.x - awayX, a.z - awayZ);
-          const distanceB = Math.hypot(b.x - awayX, b.z - awayZ);
+          const distanceA = Math.sqrt((a.x - awayX) ** 2 + (a.z - awayZ) ** 2);
+          const distanceB = Math.sqrt((b.x - awayX) ** 2 + (b.z - awayZ) ** 2);
           return distanceB - distanceA;
         })[0] || null;
     }
@@ -15488,8 +15477,8 @@
         .map((edge) => edge.node)
         .filter((node) => isReachablePathNode(currentNode, node, radius, blockedNode))
         .sort((a, b) => {
-          const distanceA = Math.hypot(a.x - towardX, a.z - towardZ);
-          const distanceB = Math.hypot(b.x - towardX, b.z - towardZ);
+          const distanceA = Math.sqrt((a.x - towardX) ** 2 + (a.z - towardZ) ** 2);
+          const distanceB = Math.sqrt((b.x - towardX) ** 2 + (b.z - towardZ) ** 2);
           return distanceA - distanceB;
         })[0] || null;
     }
@@ -15522,7 +15511,7 @@
       if (!a || !b || a.kind !== "walker" || b.kind !== "walker") return false;
       const dx = b.group.position.x - a.group.position.x;
       const dz = b.group.position.z - a.group.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       if (distance < 0.001 || distance > a.radius + b.radius + 0.52) return false;
       const nx = dx / distance;
       const nz = dz / distance;
@@ -15649,7 +15638,7 @@
       const bz = b.group.position.z;
       const dx = bx - ax;
       const dz = bz - az;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       const minDistance = a.radius + b.radius + 0.08;
       if (distance >= minDistance) return true;
 
@@ -15792,7 +15781,7 @@
     function prepareDangerNpcChase(npc, dt) {
       const dx = world.player.position.x - npc.group.position.x;
       const dz = world.player.position.z - npc.group.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       if (distance > 0.001) {
         orientNpcForMotion(npc, dx / distance, dz / distance, dt, 0.58);
       }
@@ -15823,7 +15812,7 @@
       if (isDangerNpcIgnoringPlayer(npc) || isNpcAvoidingCollision(npc)) return false;
       const dx = world.player.position.x - npc.group.position.x;
       const dz = world.player.position.z - npc.group.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       if (distance > maxDistance) return false;
       if (isLineBlocked(npc.group.position.x, npc.group.position.z, world.player.position.x, world.player.position.z)) return false;
       if (distance < closeDistance) return true;
@@ -15835,7 +15824,7 @@
     }
 
     function isLineBlocked(fromX, fromZ, toX, toZ) {
-      const distance = Math.hypot(toX - fromX, toZ - fromZ);
+      const distance = Math.sqrt((toX - fromX) ** 2 + (toZ - fromZ) ** 2);
       const steps = Math.max(1, Math.ceil(distance / 1.1));
       for (let i = 1; i < steps; i += 1) {
         const ratio = i / steps;
@@ -15882,7 +15871,7 @@
       if (!Number.isFinite(targetX) || !Number.isFinite(targetZ)) return "blocked";
       const dx = targetX - npc.group.position.x;
       const dz = targetZ - npc.group.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       if (distance <= npc.contactRange) {
         if (options.canCatchPlayer) {
           handleDangerNpcTouchPlayer(npc);
@@ -15936,7 +15925,7 @@
       const pz = world.player.position.z;
       const caught = world.npcs.some((npc) => (
         npc.kind === "danger" &&
-        Math.hypot(px - npc.group.position.x, pz - npc.group.position.z) <= npc.contactRange
+        Math.sqrt((px - npc.group.position.x) ** 2 + (pz - npc.group.position.z) ** 2) <= npc.contactRange
       ));
       if (caught) {
         triggerCaughtGameOver();
@@ -16013,7 +16002,7 @@
     }
 
     function orientCharacter(character, directionX, directionZ) {
-      if (Math.hypot(directionX, directionZ) < 0.001) return;
+      if (Math.sqrt((directionX) ** 2 + (directionZ) ** 2) < 0.001) return;
       character.rotation.y = Math.atan2(-directionX, -directionZ);
     }
 
@@ -16366,7 +16355,7 @@
           ring.mesh.rotation.y += 0.011 + danger * 0.006;
         } else if (ring.glowMesh?.material) {
           const distance = playerPosition
-            ? Math.hypot(playerPosition.x - ring.x, playerPosition.z - ring.z)
+            ? Math.sqrt((playerPosition.x - ring.x) ** 2 + (playerPosition.z - ring.z) ** 2)
             : CONFIG.ringNearGlowRange;
           const near = THREE.MathUtils.clamp(
             1 - ((distance - CONFIG.pickupRange) / (CONFIG.ringNearGlowRange - CONFIG.pickupRange)),
@@ -16390,7 +16379,7 @@
 
     function spawnRunTrailEffect(x, z, directionX, directionZ) {
       if (!world.scene) return;
-      const length = Math.hypot(directionX, directionZ);
+      const length = Math.sqrt((directionX) ** 2 + (directionZ) ** 2);
       if (length < 0.001) return;
 
       const nx = directionX / length;
@@ -17066,7 +17055,7 @@
       effect.vx *= friction;
       effect.vz *= friction;
       effect.spinY *= friction;
-      const horizontalSpeed = Math.hypot(effect.vx, effect.vz);
+      const horizontalSpeed = Math.sqrt((effect.vx) ** 2 + (effect.vz) ** 2);
       if (effect.y <= groundY + 0.002 && horizontalSpeed > 0.08) {
         const rollSign = effect.side || 1;
         const rollBoost = effect.rollBoost ?? 0.03;
@@ -17396,7 +17385,7 @@
 
       world.rings.forEach((ring) => {
         if (ring.collected) return;
-        const distance = Math.hypot(px - ring.x, pz - ring.z);
+        const distance = Math.sqrt((px - ring.x) ** 2 + (pz - ring.z) ** 2);
         if (distance < nearestDistance) {
           nearest = ring;
           nearestDistance = distance;
@@ -17502,7 +17491,7 @@
 
       const dx = target.x - world.player.position.x;
       const dz = target.z - world.player.position.z;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       const direction = describeRingDirection(dx, dz);
       const countLine = `あと ${remaining}こ`;
       let hintLine;
@@ -17526,7 +17515,7 @@
 
       world.rings.forEach((ring) => {
         if (ring.collected || ring.kind === "trap") return;
-        const distance = Math.hypot(px - ring.x, pz - ring.z);
+        const distance = Math.sqrt((px - ring.x) ** 2 + (pz - ring.z) ** 2);
         if (distance < nearestDistance) {
           nearest = ring;
           nearestDistance = distance;
@@ -17537,7 +17526,7 @@
     }
 
     function describeRingDirection(dx, dz) {
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       if (distance < 0.001) return { text: "ちかく", dir: "" };
 
       const nx = dx / distance;
@@ -17716,10 +17705,10 @@
       // 距離を再チェック（逃げられていないか）
       let stillInRange = false;
       if (target.type === "walker") {
-        const d = Math.hypot(world.player.position.x - target.npc.group.position.x, world.player.position.z - target.npc.group.position.z);
+        const d = Math.sqrt((world.player.position.x - target.npc.group.position.x) ** 2 + (world.player.position.z - target.npc.group.position.z) ** 2);
         if (d < CONFIG.punchRange + 1.0) stillInRange = true;
       } else if (target.type === "destructible") {
-        const d = Math.hypot(world.player.position.x - target.item.x, world.player.position.z - target.item.z);
+        const d = Math.sqrt((world.player.position.x - target.item.x) ** 2 + (world.player.position.z - target.item.z) ** 2);
         if (d < CONFIG.punchRange + 1.0) stillInRange = true;
       }
 
@@ -17780,7 +17769,7 @@
       const pz = world.player.position.z;
       const dx = targetX - px;
       const dz = targetZ - pz;
-      const distance = Math.hypot(dx, dz);
+      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
       const effectiveDistance = Math.max(0, distance - targetRadius);
       
       const punchRange = game.isDashAttack ? CONFIG.punchRange * 1.5 : CONFIG.punchRange;
@@ -17910,10 +17899,9 @@
         if (!canOccupyStatic(node.x, node.z, npc.radius)) return false;
         if (findBlockingNpc(node.x, node.z, npc.radius, npc)) return false;
         if (!node.neighbors.some((edge) => isPathEdgePassable(node, edge.node, npc.radius))) return false;
-        const playerDistance = Math.hypot(
-          world.player.position.x - node.x,
-          world.player.position.z - node.z
-        );
+        const playerDistance = Math.sqrt((
+          world.player.position.x - node.x) ** 2 + (world.player.position.z - node.z
+        ) ** 2);
         return playerDistance >= CONFIG.walkerRespawnMinDistance;
       }) || fallback;
     }
@@ -18439,7 +18427,7 @@
       return STAGE.buildings
         .map((building) => ({
           building,
-          distance: Math.hypot(building.x - trampoline.x, building.z - trampoline.z)
+          distance: Math.sqrt((building.x - trampoline.x) ** 2 + (building.z - trampoline.z) ** 2)
         }))
         .sort((a, b) => a.distance - b.distance)[0]?.building || null;
     }
@@ -18562,7 +18550,7 @@
             item.mesh.userData.glowMaterial.opacity = 0.2 + Math.sin(now * 0.006) * 0.08;
           }
 
-          const horizontalDistance = Math.hypot(item.x - px, item.z - pz);
+          const horizontalDistance = Math.sqrt((item.x - px) ** 2 + (item.z - pz) ** 2);
           const verticalDistance = Math.abs((world.player.position.y || 0) - item.mesh.position.y);
           if (horizontalDistance < 1.15 && verticalDistance < 2.35) {
             disposeObject3D(item.mesh);
@@ -18606,7 +18594,7 @@
           item.mesh.position.y = item.baseY + item.yOffset;
         }
 
-        if (Math.hypot(item.x - px, item.z - pz) < 1.0) {
+        if (Math.sqrt((item.x - px) ** 2 + (item.z - pz) ** 2) < 1.0) {
           disposeObject3D(item.mesh);
           world.items.splice(i, 1);
           game.infiniteStaminaUntil = now + 60000;
@@ -19755,8 +19743,10 @@
       updateMapButtonUi();
     }
 
-    function updateMinimap() {
+    function updateMinimap(now = performance.now()) {
       if (els.minimapBox.classList.contains("hidden")) return;
+      if (now - (game.lastMinimapUpdateAt || 0) < 66) return;
+      game.lastMinimapUpdateAt = now;
 
       const canvas = els.minimapCanvas;
       const ctx = minimapContext;
