@@ -7130,6 +7130,7 @@
       isPortrait: false,
       isMinimapOpen: false,
       playerStunnedUntil: 0,
+      playerKnockbackUntil: 0,
       playerBlinkVisible: true,
       playerSlippedAt: 0,
       playerSlipSeed: 0,
@@ -11534,13 +11535,14 @@
       els.cameraZone.addEventListener("lostpointercapture", stop);
     }
 
-    function setupRunButton() {
     function triggerPlayerSlip() {
       if (game.screen !== "playing" || isPlayerStunned()) return;
       const now = performance.now();
       game.playerStunnedUntil = now + 1850;
+      game.playerKnockbackUntil = 0;
       game.playerSlippedAt = now;
       game.playerSlipSeed = Math.random() * 1000;
+      resetRunInput();
       
       if (!game.hasSeenSlipWarning) {
         game.hasSeenSlipWarning = true;
@@ -11553,6 +11555,7 @@
       spawnGroundBounceEffect(world.player.position.x, world.player.position.z, 1.2, getPlayerFloorY() + 0.026);
     }
 
+    function setupRunButton() {
       const press = (event) => {
         if (game.screen !== "playing") return;
         event.preventDefault();
@@ -13863,7 +13866,18 @@
       if (isPlayerStunned()) {
         updateStamina(false, dt);
         animatePlayer(0, dt);
+        if (now < (game.playerKnockbackUntil || 0) && world.playerVelocity.lengthSq() > 0.001) {
+          movePlayerWithCollision(world.playerVelocity, dt);
+        }
         world.playerVelocity.multiplyScalar(Math.pow(0.1, dt)); // 急減速
+        return;
+      }
+
+      if (getRunInput() && game.weatherBlend > 0.5) {
+        triggerPlayerSlip();
+        updateStamina(false, dt);
+        animatePlayer(0, dt);
+        world.playerVelocity.multiplyScalar(Math.pow(0.1, dt));
         return;
       }
 
@@ -13968,11 +13982,10 @@
 
     function clearPlayerTrapState() {
       game.playerStunnedUntil = 0;
+      game.playerKnockbackUntil = 0;
       game.playerBlinkVisible = true;
       game.playerSlippedAt = 0;
       game.playerSlipSeed = 0;
-      world.playerVx = 0;
-      world.playerVz = 0;
       world.playerVy = undefined;
       if (!world.player) return;
       world.player.rotation.x = 0;
@@ -18873,6 +18886,7 @@
 
     function triggerCarHitPenalty(car) {
       game.playerStunnedUntil = performance.now() + 2000;
+      game.playerKnockbackUntil = game.playerStunnedUntil;
       resetActiveControls();
       if (game.mode === "normal") {
         game.remaining = Math.max(0, game.remaining - 4.5);
@@ -18881,8 +18895,7 @@
       const pushX = car.axis === "x" ? car.dir * 12 : 0;
       const pushZ = car.axis === "z" ? car.dir * 12 : 0;
       
-      world.playerVx = pushX;
-      world.playerVz = pushZ;
+      world.playerVelocity.set(pushX, pushZ);
       world.playerVy = 8;
       
       playHaptic("heavy");
@@ -19031,11 +19044,11 @@
       if (game.reason === "れんしゅう") {
         lines = rank
           ? [`れんしゅうの きろくは ${rank}い です。`, "また じゆうに あつめてみよう。"]
-          : ["れんしゅうの きろくを のこしました。", "また じゆうに あつめてみよう。"];
+          : ["らんきんぐには はいりませんでした。", "また じゆうに あつめてみよう。"];
       } else if (cleared) {
         lines = rank
           ? [`こんかいのきろくは ${rank}い です。`, "つぎは もっと はやい くりあを めざそう。"]
-          : ["くりあたいむを きろくしました。", "つぎは もっと はやい くりあを めざそう。"];
+          : ["らんきんぐには はいりませんでした。", "つぎは もっと はやい くりあを めざそう。"];
       } else if (caught) {
         lines = ["げーむおーばー。", "からだが くろいひとに", "つかまらないようにしよう。"];
       } else {
