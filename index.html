@@ -7313,6 +7313,7 @@
         buildStage前に経路や当たり判定を使う処理を置くと、world.blockers/pathGraphが未完成になる。
       */
       setupThree();
+      prepareActionEffectResources();
       preloadCarrierFaceAsset();
       buildStage();
       world.player = createPlayer();
@@ -16483,6 +16484,49 @@
       world.scene.add(group);
     }
 
+    function markReusableEffectGeometry(geometry) {
+      if (geometry?.userData) {
+        geometry.userData.keepEffectGeometry = true;
+      }
+      return geometry;
+    }
+
+    function ensureSharedPickupEffectResources() {
+      if (!world._sharedPickupGeo) {
+        world._sharedPickupGeo = {
+          ring: markReusableEffectGeometry(new THREE.TorusGeometry(0.18, 0.018, 8, 28)),
+          glow: markReusableEffectGeometry(new THREE.CircleGeometry(0.34, 28)),
+          matRing: new THREE.MeshBasicMaterial({ color: 0xffdf4a, transparent: true, depthWrite: false }),
+          matGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })
+        };
+      }
+      return world._sharedPickupGeo;
+    }
+
+    function ensureSharedPunchHitResources() {
+      if (!world._sharedPunchHitGeo) {
+        world._sharedPunchHitGeo = {
+          sphere: markReusableEffectGeometry(new THREE.SphereGeometry(0.2, 14, 10)),
+          ring: markReusableEffectGeometry(new THREE.RingGeometry(0.22, 0.48, 32)),
+          streak: markReusableEffectGeometry(new THREE.PlaneGeometry(0.32, 1.62)),
+          slash: markReusableEffectGeometry(new THREE.PlaneGeometry(0.14, 1.05)),
+          spark: markReusableEffectGeometry(new THREE.BoxGeometry(0.065, 0.065, 0.42)),
+          matSphere: new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, depthWrite: false }),
+          matRing: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
+          matStreak: new THREE.MeshBasicMaterial({ color: 0xfff0a5, transparent: true, depthWrite: false }),
+          matSlash: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
+          matSpark: new THREE.MeshBasicMaterial({ color: 0xffc342, transparent: true, depthWrite: false })
+        };
+      }
+      return world._sharedPunchHitGeo;
+    }
+
+    function prepareActionEffectResources() {
+      ensureSharedPickupEffectResources();
+      ensureSharedPunchHitResources();
+      [...NPC_HIT_SPEECH_LINES, "グハー"].forEach((line) => createMobSpeechTexture(line));
+    }
+
     function spawnPickupEffect(x, z) {
       if (!world.scene) return;
 
@@ -16490,26 +16534,19 @@
       group.name = "pickup-effect";
       group.position.set(x, 0.2, z);
 
-      if (!world._sharedPickupGeo) {
-        world._sharedPickupGeo = {
-          ring: new THREE.TorusGeometry(0.18, 0.018, 8, 28),
-          glow: new THREE.CircleGeometry(0.34, 28),
-          matRing: new THREE.MeshBasicMaterial({ color: 0xffdf4a, transparent: true, depthWrite: false }),
-          matGlow: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false })
-        };
-      }
+      const shared = ensureSharedPickupEffectResources();
 
-      const ringMaterial = world._sharedPickupGeo.matRing.clone();
+      const ringMaterial = shared.matRing.clone();
       ringMaterial.opacity = 0.86;
-      const glowMaterial = world._sharedPickupGeo.matGlow.clone();
+      const glowMaterial = shared.matGlow.clone();
       glowMaterial.opacity = 0.34;
 
-      const burstRing = new THREE.Mesh(world._sharedPickupGeo.ring, ringMaterial);
+      const burstRing = new THREE.Mesh(shared.ring, ringMaterial);
       burstRing.rotation.x = Math.PI / 2;
       burstRing.renderOrder = 18;
       group.add(burstRing);
 
-      const glow = new THREE.Mesh(world._sharedPickupGeo.glow, glowMaterial);
+      const glow = new THREE.Mesh(shared.glow, glowMaterial);
       glow.rotation.x = -Math.PI / 2;
       glow.position.y = -0.025;
       glow.renderOrder = 17;
@@ -16625,56 +16662,42 @@
       const group = new THREE.Group();
       group.name = "punch-hit";
       group.position.set(x, 1.05, z);
+      const shared = ensureSharedPunchHitResources();
 
-      if (!world._sharedPunchHitGeo) {
-        world._sharedPunchHitGeo = {
-          sphere: new THREE.SphereGeometry(0.2, 14, 10),
-          ring: new THREE.RingGeometry(0.22, 0.48, 32),
-          streak: new THREE.PlaneGeometry(0.32, 1.62),
-          slash: new THREE.PlaneGeometry(0.14, 1.05),
-          spark: new THREE.BoxGeometry(0.065, 0.065, 0.42),
-          matSphere: new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, depthWrite: false }),
-          matRing: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
-          matStreak: new THREE.MeshBasicMaterial({ color: 0xfff0a5, transparent: true, depthWrite: false }),
-          matSlash: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false }),
-          matSpark: new THREE.MeshBasicMaterial({ color: 0xffc342, transparent: true, depthWrite: false })
-        };
-      }
-
-      const material = world._sharedPunchHitGeo.matSphere.clone();
+      const material = shared.matSphere.clone();
       material.opacity = 0.92;
-      const burst = new THREE.Mesh(world._sharedPunchHitGeo.sphere, material);
+      const burst = new THREE.Mesh(shared.sphere, material);
       burst.renderOrder = 24;
       group.add(burst);
 
-      const ringMaterial = world._sharedPunchHitGeo.matRing.clone();
+      const ringMaterial = shared.matRing.clone();
       ringMaterial.opacity = 0.72;
-      const ring = new THREE.Mesh(world._sharedPunchHitGeo.ring, ringMaterial);
+      const ring = new THREE.Mesh(shared.ring, ringMaterial);
       ring.rotation.set(Math.PI / 2, 0, -angle);
       ring.renderOrder = 25;
       group.add(ring);
 
-      const streakMaterial = world._sharedPunchHitGeo.matStreak.clone();
+      const streakMaterial = shared.matStreak.clone();
       streakMaterial.opacity = 0.68;
-      const streak = new THREE.Mesh(world._sharedPunchHitGeo.streak, streakMaterial);
+      const streak = new THREE.Mesh(shared.streak, streakMaterial);
       streak.position.set(forward.x * -0.48, 0.02, forward.z * -0.48);
       streak.rotation.set(Math.PI / 2, 0, -angle);
       streak.renderOrder = 23;
       group.add(streak);
 
-      const slashMaterial = world._sharedPunchHitGeo.matSlash.clone();
+      const slashMaterial = shared.matSlash.clone();
       slashMaterial.opacity = 0.62;
-      const slash = new THREE.Mesh(world._sharedPunchHitGeo.slash, slashMaterial);
+      const slash = new THREE.Mesh(shared.slash, slashMaterial);
       slash.position.set(forward.x * 0.08, 0.03, forward.z * 0.08);
       slash.rotation.set(Math.PI / 2, 0, -angle + 0.68 * (game.punchSide || 1));
       slash.renderOrder = 27;
       group.add(slash);
 
       const sparks = [];
-      const sparkMaterial = world._sharedPunchHitGeo.matSpark.clone();
+      const sparkMaterial = shared.matSpark.clone();
       sparkMaterial.opacity = 0.86;
       for (let i = 0; i < CONFIG.effectPunchSparkCount; i += 1) {
-        const spark = new THREE.Mesh(world._sharedPunchHitGeo.spark, sparkMaterial);
+        const spark = new THREE.Mesh(shared.spark, sparkMaterial);
         const sparkAngle = angle + randomBetween(-0.95, 0.95);
         spark.rotation.y = sparkAngle;
         spark.renderOrder = 26;
@@ -16831,6 +16854,7 @@
         groundMargin: profile.groundMargin,
         landingSound: profile.landingSound,
         shake: profile.shake,
+        collisionRadius: Math.max(0.1, item.radius || 0, Math.max(item.w || 0, item.d || 0) * 0.52),
         side,
         materials: [],
         startedAt: now,
@@ -16882,6 +16906,7 @@
         groundMargin: 0.035,
         landingSound: "landHeavy",
         shake: 0.075,
+        collisionRadius: Math.max(0.1, npc.radius || CONFIG.npcRadius),
         side: game.punchSide || 1,
         materials: [],
         startedAt: now,
@@ -17046,10 +17071,9 @@
       const nextX = effect.x + effect.vx * dt;
       const nextZ = effect.z + effect.vz * dt;
 
-      // 毎フレーム正確なXZ平面の半径を計算（めり込み防止）
-      effect.object.updateMatrixWorld(true);
-      const box = THROW_TEMP_BOX.setFromObject(effect.object);
-      const radius = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.52;
+      const radius = Number.isFinite(effect.collisionRadius)
+        ? effect.collisionRadius
+        : CONFIG.npcRadius;
 
       if (!canOccupyStatic(nextX, effect.z, radius)) {
         effect.vx *= -0.4;
@@ -17394,7 +17418,9 @@
         world.scene.remove(effect.group);
       }
       effect.group?.traverse((object) => {
-        if (object.geometry) object.geometry.dispose();
+        if (object.geometry && !object.geometry.userData?.keepEffectGeometry) {
+          object.geometry.dispose();
+        }
       });
       effect.materials?.forEach((material) => material.dispose());
       effect.textures?.forEach((texture) => texture.dispose());
@@ -17773,57 +17799,93 @@
     }
 
     function findPunchTarget() {
-      const walkerCandidates = [];
-      const destructibleCandidates = [];
-      const dangerCandidates = [];
+      if (!world.player) return null;
+
+      const px = world.player.position.x;
+      const pz = world.player.position.z;
+      const forward = getPlayerForwardVector();
+      const punchRange = game.isDashAttack ? CONFIG.punchRange * 1.5 : CONFIG.punchRange;
+      const punchArc = game.isDashAttack ? CONFIG.punchArc * 1.5 : CONFIG.punchArc;
+      const punchArcCos = Math.cos(punchArc / 2);
+      let nearest = null;
+      let nearestDistance = Infinity;
+
+      const consider = (type, targetX, targetZ, targetRadius, payload) => {
+        const distance = getPunchHitDistance(
+          px,
+          pz,
+          forward,
+          punchRange,
+          punchArcCos,
+          targetX,
+          targetZ,
+          targetRadius
+        );
+        if (distance === null || distance >= nearestDistance) return;
+        nearestDistance = distance;
+        nearest = { type, ...payload, distance };
+      };
 
       world.npcs.forEach((npc) => {
-        if (npc.isDefeated) return;
-        const hit = getPunchHitInfo(npc.group.position.x, npc.group.position.z, npc.radius);
-        if (!hit) return;
-        if (npc.kind === "danger") {
-          dangerCandidates.push({ type: "danger", npc, distance: hit.distance });
-        } else {
-          walkerCandidates.push({ type: "walker", npc, distance: hit.distance });
-        }
+        if (npc.isDefeated || npc.kind === "danger") return;
+        consider(
+          "walker",
+          npc.group.position.x,
+          npc.group.position.z,
+          npc.radius,
+          { npc }
+        );
       });
 
       world.destructibles.forEach((item) => {
         if (item.destroyed || !item.object?.visible) return;
         const targetRadius = item.radius !== undefined ? item.radius : Math.max(item.w, item.d) / 2;
-        const hit = getPunchHitInfo(item.x, item.z, targetRadius);
-        if (!hit) return;
-        destructibleCandidates.push({ type: "destructible", item, distance: hit.distance });
+        consider("destructible", item.x, item.z, targetRadius, { item });
       });
 
-      const allCandidates = [
-        ...walkerCandidates,
-        ...destructibleCandidates,
-        ...dangerCandidates
-      ];
-      allCandidates.sort((a, b) => a.distance - b.distance);
-      return allCandidates[0] || null;
+      world.npcs.forEach((npc) => {
+        if (npc.isDefeated || npc.kind !== "danger") return;
+        consider("danger", npc.group.position.x, npc.group.position.z, npc.radius, { npc });
+      });
+
+      return nearest;
     }
 
     function getPunchHitInfo(targetX, targetZ, targetRadius = 0) {
       if (!world.player) return null;
       const px = world.player.position.x;
       const pz = world.player.position.z;
-      const dx = targetX - px;
-      const dz = targetZ - pz;
-      const distance = Math.sqrt((dx) ** 2 + (dz) ** 2);
-      const effectiveDistance = Math.max(0, distance - targetRadius);
-      
+      const forward = getPlayerForwardVector();
       const punchRange = game.isDashAttack ? CONFIG.punchRange * 1.5 : CONFIG.punchRange;
       const punchArc = game.isDashAttack ? CONFIG.punchArc * 1.5 : CONFIG.punchArc;
-      
-      if (effectiveDistance > punchRange) return null;
-      if (distance < 0.001) return { distance: 0 };
+      const distance = getPunchHitDistance(
+        px,
+        pz,
+        forward,
+        punchRange,
+        Math.cos(punchArc / 2),
+        targetX,
+        targetZ,
+        targetRadius
+      );
+      return distance === null ? null : { distance };
+    }
 
-      const forward = getPlayerForwardVector();
+    function getPunchHitDistance(px, pz, forward, punchRange, punchArcCos, targetX, targetZ, targetRadius = 0) {
+      const dx = targetX - px;
+      const dz = targetZ - pz;
+      const maxDistance = punchRange + Math.max(0, targetRadius);
+      const distanceSq = dx * dx + dz * dz;
+      if (distanceSq > maxDistance * maxDistance) return null;
+
+      const distance = Math.sqrt(distanceSq);
+      const effectiveDistance = Math.max(0, distance - targetRadius);
+      if (effectiveDistance > punchRange) return null;
+      if (distance < 0.001) return 0;
+
       const dot = (forward.x * dx + forward.z * dz) / distance;
-      if (dot < Math.cos(punchArc / 2)) return null;
-      return { distance: effectiveDistance };
+      if (dot < punchArcCos) return null;
+      return effectiveDistance;
     }
 
     function getPlayerForwardVector() {
