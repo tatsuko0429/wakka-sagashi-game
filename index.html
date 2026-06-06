@@ -34,9 +34,12 @@
       --ink: #f7fbff;
       --panel: rgba(21, 28, 34, 0.78);
       --panel-strong: rgba(15, 20, 25, 0.9);
+      --panel-warm: rgba(31, 37, 34, 0.88);
       --line: rgba(255, 255, 255, 0.22);
       --accent: #f3c72d;
       --accent-strong: #d9a900;
+      --button-dark: rgba(28, 38, 48, 0.92);
+      --button-dark-strong: rgba(13, 20, 27, 0.96);
       --ok: #2ea86c;
       --danger: #d84d4d;
     }
@@ -72,6 +75,12 @@
       color: #111820;
       cursor: pointer;
       touch-action: manipulation;
+      transition: transform 120ms ease-out, filter 120ms ease-out, box-shadow 160ms ease-out, background 160ms ease-out;
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(255, 241, 168, 0.92);
+      outline-offset: 3px;
     }
 
     #gameRoot {
@@ -150,7 +159,9 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: rgba(10, 16, 22, 0.38);
+      background:
+        linear-gradient(180deg, rgba(10, 16, 22, 0.42), rgba(10, 16, 22, 0.56)),
+        radial-gradient(ellipse at center, rgba(255, 225, 91, 0.08), rgba(255, 225, 91, 0) 48%);
       opacity: 1;
       visibility: visible;
       transition: opacity 350ms ease-out, visibility 350ms;
@@ -160,8 +171,13 @@
       width: min(560px, calc(100% - 32px));
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel-strong);
-      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 28%),
+        linear-gradient(180deg, var(--panel-warm), rgba(14, 19, 24, 0.94));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -5px 0 rgba(0, 0, 0, 0.24),
+        0 18px 46px rgba(0, 0, 0, 0.38);
       padding: 26px;
       text-align: center;
       transform: scale(1);
@@ -187,12 +203,31 @@
     }
 
     .title {
-      margin: 0 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0 0 12px;
       font-size: 44px;
       line-height: 1.12;
       font-weight: 900;
       color: #fff;
-      text-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+      text-shadow: 0 3px 0 rgba(0, 0, 0, 0.32), 0 0 18px rgba(255, 210, 74, 0.24);
+    }
+
+    .title::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 38px;
+      height: 25px;
+      border: 8px solid #101010;
+      border-radius: 50%;
+      background: transparent;
+      box-shadow:
+        inset 0 2px 3px rgba(255, 255, 255, 0.35),
+        0 0 0 4px rgba(243, 199, 45, 0.2),
+        0 5px 10px rgba(0, 0, 0, 0.36);
+      transform: rotate(-10deg);
     }
 
     .subtitle {
@@ -210,8 +245,14 @@
       min-width: 210px;
       min-height: 54px;
       padding: 13px 22px;
-      background: var(--accent);
-      box-shadow: inset 0 -4px 0 var(--accent-strong), 0 8px 18px rgba(0, 0, 0, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 44%),
+        linear-gradient(180deg, #ffe67a, var(--accent));
+      box-shadow:
+        inset 0 -5px 0 var(--accent-strong),
+        0 8px 18px rgba(0, 0, 0, 0.24),
+        0 0 0 5px rgba(243, 199, 45, 0.12);
       font-size: 18px;
     }
 
@@ -219,9 +260,19 @@
       min-width: 150px;
       min-height: 48px;
       padding: 11px 18px;
-      background: #e9eef3;
-      box-shadow: inset 0 -3px 0 #b8c1ca;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 48%),
+        linear-gradient(180deg, #f5f8fb, #dfe7ef);
+      box-shadow: inset 0 -4px 0 #b8c1ca, 0 7px 16px rgba(0, 0, 0, 0.18);
       font-size: 16px;
+    }
+
+    .primaryButton:active,
+    .secondaryButton:active,
+    #quitPracticeButton:active {
+      transform: translateY(2px) scale(0.98);
+      filter: brightness(0.96);
     }
 
     .buttonRow {
@@ -242,8 +293,10 @@
       padding: 14px 16px 16px;
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
-      background: rgba(23, 31, 38, 0.72);
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 8px 18px rgba(0, 0, 0, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0)),
+        rgba(23, 31, 38, 0.74);
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 8px 18px rgba(0, 0, 0, 0.2);
     }
 
     .resumeTitle {
@@ -283,24 +336,43 @@
       z-indexやpointer-eventsを触ったらジョイスティック/カメラドラッグ/ボタンの同時操作を確認する。
     */
     .hudBox {
-      min-width: 140px;
+      min-width: 132px;
       width: auto;
-      min-height: 52px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      min-height: 48px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 8px;
-      background: var(--panel);
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.24), 0 7px 16px rgba(0, 0, 0, 0.18);
-      padding: 8px 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0) 45%),
+        rgba(18, 26, 32, 0.72);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -3px 0 rgba(0, 0, 0, 0.26),
+        0 7px 16px rgba(0, 0, 0, 0.2);
+      padding: 7px 16px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 9px;
       color: #fff;
-      font-size: 26px;
+      font-size: 24px;
       line-height: 1;
       font-weight: 900;
       text-shadow: 0 2px 0 rgba(0, 0, 0, 0.38);
       white-space: nowrap;
+    }
+
+    .hudBox[aria-label="あつめたかず"]::before {
+      content: "";
+      width: 25px;
+      height: 16px;
+      border: 5px solid #111;
+      border-radius: 50%;
+      background: transparent;
+      box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.32),
+        0 0 0 3px rgba(243, 199, 45, 0.17),
+        0 3px 6px rgba(0, 0, 0, 0.28);
+      transform: rotate(-8deg);
     }
 
     #scoreText {
@@ -337,16 +409,19 @@
 
     #minimapBox {
       position: absolute;
-      top: 14px;
-      left: 50%;
+      top: 76px;
+      right: 18px;
       z-index: 12;
-      width: 152px;
-      padding: 8px 8px 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      width: 146px;
+      padding: 7px 7px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 8px;
-      background: var(--panel);
-      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.24), 0 7px 16px rgba(0, 0, 0, 0.18);
-      transform: translateX(-50%);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%),
+        rgba(16, 23, 30, 0.72);
+      box-shadow:
+        inset 0 -3px 0 rgba(0, 0, 0, 0.24),
+        0 7px 16px rgba(0, 0, 0, 0.2);
       pointer-events: none;
     }
 
@@ -362,8 +437,8 @@
 
     #minimapCanvas {
       display: block;
-      width: 134px;
-      height: 134px;
+      width: 130px;
+      height: 130px;
       border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 6px;
       background: rgba(14, 20, 26, 0.96);
@@ -526,10 +601,12 @@
     #quitPracticeButton {
       min-width: 96px;
       min-height: 46px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      border: 2px solid rgba(255, 255, 255, 0.24);
       border-radius: 8px;
-      background: #e9eef3;
-      box-shadow: inset 0 -3px 0 #b8c1ca, 0 7px 16px rgba(0, 0, 0, 0.18);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 48%),
+        #e9eef3;
+      box-shadow: inset 0 -4px 0 #b8c1ca, 0 7px 16px rgba(0, 0, 0, 0.18);
       color: #17202a;
       font-size: 19px;
       line-height: 1;
@@ -543,10 +620,14 @@
       z-index: 5;
       width: 78px;
       height: 78px;
-      border: 3px solid rgba(255, 255, 255, 0.28);
+      border: 3px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%;
-      background: linear-gradient(180deg, rgba(48, 62, 74, 0.9), rgba(22, 29, 37, 0.9));
-      box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.24), 0 8px 20px rgba(0, 0, 0, 0.24);
+      background:
+        radial-gradient(circle at 45% 24%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(180deg, rgba(55, 72, 88, 0.9), rgba(19, 28, 37, 0.92));
+      box-shadow:
+        inset 0 -7px 0 rgba(0, 0, 0, 0.25),
+        0 8px 20px rgba(0, 0, 0, 0.24);
       color: #ffffff;
       font-size: 15px;
       line-height: 1;
@@ -604,7 +685,9 @@
     }
 
     #mapButton.is-open {
-      background: linear-gradient(180deg, rgba(255, 219, 81, 0.98), rgba(225, 159, 25, 0.98));
+      background:
+        radial-gradient(circle at 45% 24%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 44%),
+        linear-gradient(180deg, rgba(255, 225, 101, 0.98), rgba(225, 159, 25, 0.98));
       color: #111820;
       border-color: rgba(255, 255, 255, 0.72);
       box-shadow: inset 0 -7px 0 rgba(163, 126, 0, 0.34), 0 8px 20px rgba(0, 0, 0, 0.24);
@@ -617,8 +700,8 @@
     }
 
     .hudLabel {
-      font-size: 20px;
-      color: rgba(255, 255, 255, 0.9);
+      font-size: 17px;
+      color: rgba(255, 255, 255, 0.84);
     }
 
     .clockIcon {
@@ -679,8 +762,10 @@
       height: 240px;
       border: 2px solid rgba(255, 255, 255, 0.42);
       border-radius: 50%;
-      background: rgba(31, 42, 52, 0.44);
-      box-shadow: inset 0 0 0 15px rgba(255, 255, 255, 0.08), 0 8px 22px rgba(0, 0, 0, 0.2);
+      background: rgba(31, 42, 52, 0.3);
+      box-shadow:
+        inset 0 0 0 15px rgba(255, 255, 255, 0.055),
+        0 8px 22px rgba(0, 0, 0, 0.18);
       pointer-events: auto;
       touch-action: none;
     }
@@ -716,9 +801,11 @@
       height: 114px;
       border: 3px solid rgba(255, 255, 255, 0.58);
       border-radius: 50%;
-      background: rgba(214, 221, 228, 0.36);
+      background:
+        radial-gradient(circle at 48% 30%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 45%),
+        rgba(214, 221, 228, 0.26);
       transform: translate(-50%, -50%);
-      box-shadow: inset 0 -8px 14px rgba(0, 0, 0, 0.12);
+      box-shadow: inset 0 -8px 14px rgba(0, 0, 0, 0.12), 0 5px 12px rgba(0, 0, 0, 0.14);
     }
 
     .stickMark {
@@ -770,8 +857,8 @@
       border: 3px solid rgba(255, 255, 255, 0.36);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 48% 30%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 46%),
-        linear-gradient(180deg, rgba(48, 62, 74, 0.9), rgba(22, 29, 37, 0.9));
+        radial-gradient(circle at 48% 26%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 44%),
+        linear-gradient(180deg, var(--button-dark), var(--button-dark-strong));
       box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.25), 0 9px 24px rgba(0, 0, 0, 0.28);
       color: #fff;
       pointer-events: auto;
@@ -792,7 +879,10 @@
       border: 8px solid #111;
       border-radius: 50%;
       background: transparent;
-      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.32), 0 4px 8px rgba(0, 0, 0, 0.34);
+      box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.32),
+        0 0 0 3px rgba(255, 255, 255, 0.08),
+        0 4px 8px rgba(0, 0, 0, 0.34);
     }
 
     #pickupButton span {
@@ -803,12 +893,16 @@
 
     #pickupButton.is-ready {
       background:
-        radial-gradient(circle at 50% 26%, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 48%),
-        linear-gradient(180deg, rgba(255, 219, 81, 0.98), rgba(225, 159, 25, 0.98));
+        radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 48%),
+        linear-gradient(180deg, rgba(255, 231, 112, 0.98), rgba(225, 159, 25, 0.98));
       color: #111820;
       text-shadow: none;
       border-color: rgba(255, 255, 255, 0.72);
-      box-shadow: inset 0 -8px 0 rgba(163, 126, 0, 0.34), 0 0 0 7px rgba(243, 199, 45, 0.16), 0 10px 26px rgba(0, 0, 0, 0.3);
+      box-shadow:
+        inset 0 -8px 0 rgba(163, 126, 0, 0.34),
+        0 0 0 7px rgba(243, 199, 45, 0.18),
+        0 0 28px rgba(255, 214, 74, 0.34),
+        0 10px 26px rgba(0, 0, 0, 0.3);
     }
 
     #pickupButton.is-ready .ringMark {
@@ -840,14 +934,14 @@
       border: 3px solid rgba(255, 255, 255, 0.34);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 47%),
-        linear-gradient(180deg, rgba(62, 70, 77, 0.94), rgba(31, 38, 45, 0.94));
+        radial-gradient(circle at 50% 28%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 47%),
+        linear-gradient(180deg, rgba(43, 55, 65, 0.95), rgba(20, 28, 35, 0.96));
       box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.22), 0 8px 20px rgba(0, 0, 0, 0.24);
-      color: #111820;
+      color: #ffffff;
       overflow: hidden;
       pointer-events: auto;
       text-align: center;
-      text-shadow: none;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.28);
       touch-action: none;
       display: flex;
       flex-direction: column;
@@ -862,7 +956,7 @@
       inset: auto 0 0 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(180deg, #ffd35a 0%, #f39a22 100%);
+      background: linear-gradient(180deg, rgba(102, 217, 154, 0.96) 0%, rgba(39, 164, 116, 0.96) 100%);
       transition: height 0.12s linear;
       z-index: 0;
     }
@@ -912,8 +1006,8 @@
     }
 
     #runButton.is-running:not(.is-empty) {
-      border-color: rgba(255, 247, 180, 0.82);
-      box-shadow: inset 0 -7px 0 rgba(130, 70, 0, 0.24), 0 0 22px rgba(255, 199, 45, 0.34), 0 8px 20px rgba(0, 0, 0, 0.24);
+      border-color: rgba(151, 248, 198, 0.84);
+      box-shadow: inset 0 -7px 0 rgba(13, 76, 52, 0.22), 0 0 22px rgba(72, 210, 142, 0.34), 0 8px 20px rgba(0, 0, 0, 0.24);
     }
 
     #runButton.is-empty {
@@ -951,9 +1045,9 @@
       border: 3px solid rgba(255, 255, 255, 0.36);
       border-radius: 50%;
       background:
-        radial-gradient(circle at 50% 27%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 48%),
-        linear-gradient(180deg, rgba(255, 216, 74, 0.98), rgba(224, 145, 24, 0.98));
-      box-shadow: inset 0 -7px 0 rgba(128, 86, 0, 0.25), 0 8px 20px rgba(0, 0, 0, 0.24);
+        radial-gradient(circle at 50% 26%, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 48%),
+        linear-gradient(180deg, rgba(255, 190, 86, 0.98), rgba(217, 97, 33, 0.98));
+      box-shadow: inset 0 -7px 0 rgba(128, 52, 0, 0.26), 0 8px 20px rgba(0, 0, 0, 0.24);
       color: #111820;
       pointer-events: auto;
       touch-action: none;
@@ -1052,7 +1146,11 @@
       align-items: center;
       justify-content: center;
       padding: 18px;
-      background: rgba(6, 11, 16, 0.48);
+      background:
+        linear-gradient(180deg, rgba(6, 11, 16, 0.68), rgba(6, 11, 16, 0.74)),
+        rgba(6, 11, 16, 0.48);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
     }
 
     /*
@@ -1064,6 +1162,8 @@
       align-items: flex-start;
       padding-top: max(10px, env(safe-area-inset-top));
       background: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
       pointer-events: none;
     }
 
@@ -1689,19 +1789,20 @@
       }
 
       #minimapBox {
-        top: 10px;
-        width: 134px;
-        padding: 7px 7px 8px;
+        top: 58px;
+        right: calc(max(18px, env(safe-area-inset-right)) + 96px);
+        width: 118px;
+        padding: 6px 6px 7px;
       }
 
       #minimapTitle {
-        font-size: 12px;
-        margin-bottom: 5px;
+        font-size: 11px;
+        margin-bottom: 4px;
       }
 
       #minimapCanvas {
-        width: 118px;
-        height: 118px;
+        width: 104px;
+        height: 104px;
       }
 
       #hintToast {
@@ -10210,6 +10311,40 @@
       return y;
     }
 
+    function addRingReadabilityLayers(item, options = {}) {
+      const rimMaterial = new THREE.MeshBasicMaterial({
+        color: options.rimColor ?? 0xffdf62,
+        transparent: true,
+        opacity: options.rimOpacity ?? 0.22,
+        depthWrite: false
+      });
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(options.rimRadius ?? 0.148, options.rimTube ?? 0.006, 8, 28),
+        rimMaterial
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.003;
+      rim.renderOrder = 11;
+      item.add(rim);
+
+      const shadowMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: options.shadowOpacity ?? 0.16,
+        depthWrite: false
+      });
+      const shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(options.shadowRadius ?? 0.28, 28),
+        shadowMaterial
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = -0.045;
+      shadow.renderOrder = 9;
+      item.add(shadow);
+
+      return { rim, rimMaterial, shadow, shadowMaterial };
+    }
+
     function createRings() {
       /*
         本番/練習共通のリング生成入口。通常リング、罠リング、キャリア由来リングがworld.ringsに混在する。
@@ -10221,16 +10356,18 @@
 
       const ringGroup = new THREE.Group();
       ringGroup.name = "rings";
-      const ringGeometry = new THREE.TorusGeometry(0.128, 0.03, 10, 24);
+      const ringGeometry = new THREE.TorusGeometry(0.138, 0.032, 12, 28);
       const ringMaterial = new THREE.MeshStandardMaterial({
         color: 0x0f0f0f,
         roughness: 0.42,
-        metalness: 0.28
+        metalness: 0.28,
+        emissive: 0x111111,
+        emissiveIntensity: 0.42
       });
       const coreMaterial = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
-        opacity: 0.11,
+        opacity: 0.13,
         depthWrite: false
       });
 
@@ -10243,9 +10380,10 @@
         ring.castShadow = true;
         ring.renderOrder = 12;
         item.add(ring);
+        const readability = addRingReadabilityLayers(item);
 
         const glowMaterial = coreMaterial.clone();
-        const glow = new THREE.Mesh(new THREE.CircleGeometry(0.19, 24), glowMaterial);
+        const glow = new THREE.Mesh(new THREE.CircleGeometry(0.24, 28), glowMaterial);
         glow.rotation.x = -Math.PI / 2;
         glow.position.y = -0.02;
         glow.renderOrder = 11;
@@ -10258,8 +10396,12 @@
           mesh: item,
           ringMesh: ring,
           glowMesh: glow,
+          rimMesh: readability.rim,
+          shadowMesh: readability.shadow,
           ringMaterial: ringMaterial,
           glowMaterial: glowMaterial,
+          rimMaterial: readability.rimMaterial,
+          shadowMaterial: readability.shadowMaterial,
           source: "ground",
           baseY: item.position.y,
           collected: false,
@@ -10293,9 +10435,14 @@
         ring.castShadow = true;
         ring.renderOrder = 12;
         item.add(ring);
+        const readability = addRingReadabilityLayers(item, {
+          rimColor: 0xff5b4f,
+          rimOpacity: 0.12,
+          shadowOpacity: 0.14
+        });
         const warningMarks = addTrapRingWarningMarks(item);
 
-        const glow = new THREE.Mesh(new THREE.CircleGeometry(0.19, 24), trapGlowMaterial);
+        const glow = new THREE.Mesh(new THREE.CircleGeometry(0.24, 28), trapGlowMaterial);
         glow.rotation.x = -Math.PI / 2;
         glow.position.y = -0.02;
         glow.renderOrder = 11;
@@ -10320,9 +10467,13 @@
           mesh: item,
           ringMesh: ring,
           glowMesh: glow,
+          rimMesh: readability.rim,
+          shadowMesh: readability.shadow,
           auraMesh: aura,
           ringMaterial: trapMaterial,
           glowMaterial: trapGlowMaterial,
+          rimMaterial: readability.rimMaterial,
+          shadowMaterial: readability.shadowMaterial,
           auraMaterial,
           warningMarks,
           warningMaterial: warningMarks[0]?.material || null,
@@ -10347,22 +10498,25 @@
       const ringMaterial = new THREE.MeshStandardMaterial({
         color: 0x0f0f0f,
         roughness: 0.42,
-        metalness: 0.28
+        metalness: 0.28,
+        emissive: 0x111111,
+        emissiveIntensity: 0.42
       });
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
-        opacity: 0.11,
+        opacity: 0.13,
         depthWrite: false
       });
 
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.128, 0.03, 10, 24), ringMaterial);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.138, 0.032, 12, 28), ringMaterial);
       ring.rotation.x = Math.PI / 2;
       ring.castShadow = true;
       ring.renderOrder = 12;
       item.add(ring);
+      const readability = addRingReadabilityLayers(item);
 
-      const glow = new THREE.Mesh(new THREE.CircleGeometry(0.19, 24), glowMaterial);
+      const glow = new THREE.Mesh(new THREE.CircleGeometry(0.24, 28), glowMaterial);
       glow.rotation.x = -Math.PI / 2;
       glow.position.y = -0.02;
       glow.renderOrder = 11;
@@ -10375,7 +10529,11 @@
         source: "carrier",
         mesh: item,
         ringMesh: ring,
+        rimMesh: readability.rim,
+        shadowMesh: readability.shadow,
         ringMaterial: ringMaterial,
+        rimMaterial: readability.rimMaterial,
+        shadowMaterial: readability.shadowMaterial,
         glowMesh: glow,
         glowMaterial: glowMaterial,
         baseY: item.position.y,
@@ -16360,6 +16518,12 @@
         if (ring.glowMaterial) {
           ring.glowMaterial.opacity = THREE.MathUtils.lerp(0.4, 0.7, nightFactor);
         }
+        if (ring.rimMaterial) {
+          ring.rimMaterial.opacity = THREE.MathUtils.lerp(0.18, 0.28, nightFactor);
+        }
+        if (ring.shadowMaterial) {
+          ring.shadowMaterial.opacity = THREE.MathUtils.lerp(0.16, 0.1, nightFactor);
+        }
 
         const pulseAmplitude = ring.kind === "trap"
           ? 0.06
@@ -16386,6 +16550,16 @@
           ring.glowMaterial.color.setHex(active ? 0xff4b4b : 0x140000);
           ring.glowMaterial.opacity = 0.035 + danger * 0.28;
           ring.glowMesh.scale.setScalar(0.92 + danger * 0.62);
+          if (ring.rimMaterial) {
+            ring.rimMaterial.color.setHex(active ? 0xff675d : 0x5a1914);
+            ring.rimMaterial.opacity = 0.08 + danger * 0.36;
+          }
+          if (ring.rimMesh) {
+            ring.rimMesh.scale.setScalar(0.94 + danger * 0.24);
+          }
+          if (ring.shadowMaterial) {
+            ring.shadowMaterial.opacity = 0.12 + danger * 0.06;
+          }
           if (ring.auraMesh?.material) {
             ring.auraMesh.material.color.setHex(active ? 0xff3030 : 0x260000);
             ring.auraMesh.material.opacity = 0.025 + danger * 0.17;
@@ -16410,10 +16584,19 @@
             1
           );
           const nearEase = near * near * (3 - 2 * near);
-          const baseOpacity = THREE.MathUtils.lerp(0.1, 0.034, world.nightBlend);
-          const nearOpacity = THREE.MathUtils.lerp(0.16, 0.3, world.nightBlend);
+          const baseOpacity = THREE.MathUtils.lerp(0.13, 0.06, world.nightBlend);
+          const nearOpacity = THREE.MathUtils.lerp(0.18, 0.32, world.nightBlend);
           ring.glowMesh.material.opacity = baseOpacity + nearEase * nearOpacity;
           ring.glowMesh.scale.setScalar(1 + nearEase * 0.58);
+          if (ring.rimMaterial) {
+            ring.rimMaterial.opacity = THREE.MathUtils.lerp(0.2, 0.32, world.nightBlend) + nearEase * 0.12;
+          }
+          if (ring.rimMesh) {
+            ring.rimMesh.scale.setScalar(1 + nearEase * 0.1);
+          }
+          if (ring.shadowMaterial) {
+            ring.shadowMaterial.opacity = THREE.MathUtils.lerp(0.15, 0.1, world.nightBlend) + nearEase * 0.04;
+          }
         }
       });
     }
