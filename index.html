@@ -1330,6 +1330,9 @@
       max-height: calc(100dvh - 32px);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 24%),
+        linear-gradient(180deg, rgba(24, 30, 32, 0.97), rgba(10, 14, 18, 0.98));
     }
 
     #resultHeadline {
@@ -1388,6 +1391,99 @@
 
     #rankText span {
       display: block;
+    }
+
+    .resultSection {
+      width: min(430px, 100%);
+      margin: 12px auto 0;
+      text-align: left;
+    }
+
+    .resultSectionTitle {
+      margin: 0 0 6px;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .resultLogList,
+    .resultBadgeList {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 7px;
+    }
+
+    .resultLogList li,
+    .resultBadgeList li {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 8px 11px;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 14px;
+      line-height: 1.55;
+      font-weight: 800;
+      word-break: keep-all;
+      line-break: strict;
+    }
+
+    .resultBadgeList li {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border-color: rgba(243, 199, 45, 0.34);
+      background: rgba(243, 199, 45, 0.12);
+    }
+
+    .badgeName {
+      color: #fff;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .badgeNote {
+      display: block;
+      margin-top: 2px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .badgeNew {
+      border-radius: 999px;
+      background: #f3c72d;
+      padding: 3px 7px;
+      color: #111820;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .resultSharePanel {
+      width: min(430px, 100%);
+      margin: 12px auto 0;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
+    }
+
+    .resultShareButton {
+      min-width: 190px;
+    }
+
+    #resultShareStatus {
+      min-height: 18px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 800;
+      text-align: center;
     }
 
     #rankingList {
@@ -1993,6 +2089,18 @@
           <span id="resultRankValue">S</span>
         </div>
         <p id="rankText">くりあたいむを きろくしました。</p>
+        <div id="resultAdventure" class="resultSection">
+          <div class="resultSectionTitle">ぼうけんログ</div>
+          <ul id="resultLogList" class="resultLogList"></ul>
+        </div>
+        <div id="resultBadges" class="resultSection hidden">
+          <div class="resultSectionTitle">しょうごう</div>
+          <ul id="resultBadgeList" class="resultBadgeList"></ul>
+        </div>
+        <div id="resultSharePanel" class="resultSharePanel hidden">
+          <button id="shareButton" class="secondaryButton resultShareButton" type="button">けっかをシェア</button>
+          <span id="resultShareStatus" aria-live="polite"></span>
+        </div>
         <div id="rankingHeading">ほんばん らんきんぐ</div>
         <ol id="rankingList"></ol>
         <div class="buttonRow">
@@ -6634,12 +6742,26 @@
       rankingLimit: 5,
       storageKey: "wakka-kaishu-time-ranking-v2",
       practiceStorageKey: "wakka-kaishu-practice-ranking-v1",
+      achievementStorageKey: "wakka-kaishu-achievements-v1",
       progressStorageKey: "wakka-kaishu-progress-v1",
       practiceProgressStorageKey: "wakka-kaishu-practice-progress-v1",
       progressSaveVersion: 1,
       progressAutoSaveIntervalMs: 3500,
       practiceRooftopRevealRespawnMs: 60000
     };
+
+    const ACHIEVEMENTS = [
+      { id: "first-clear", name: "はじめての くりあ", note: "ほんばんを さいごまで あそんだ" },
+      { id: "fast-clear", name: "はやあつめ", note: "1:30いないに くりあした" },
+      { id: "clean-run", name: "すりぬけ名人", note: "あぶないできごとなしで くりあした" },
+      { id: "puncher", name: "ぱんち職人", note: "1かいの冒険で 5かい以上 ぱんちした" },
+      { id: "escape-artist", name: "にげきり上手", note: "みつかっても にげきった" },
+      { id: "carrier-chaser", name: "おいかけ名人", note: "にげたひとの わっかを ひろった" },
+      { id: "rain-explorer", name: "雨の日の探検家", note: "雨の中で わっかを 2こ以上 みつけた" },
+      { id: "practice-collector", name: "れんしゅう好き", note: "れんしゅうで 10こ以上 あつめた" }
+    ];
+
+    const ACHIEVEMENT_BY_ID = new Map(ACHIEVEMENTS.map((item) => [item.id, item]));
 
     const DANGER_MONSTER_BASE = {
       kind: "danger",
@@ -7198,6 +7320,12 @@
       resultRankBox: document.getElementById("resultRankBox"),
       resultRankValue: document.getElementById("resultRankValue"),
       rankText: document.getElementById("rankText"),
+      resultLogList: document.getElementById("resultLogList"),
+      resultBadges: document.getElementById("resultBadges"),
+      resultBadgeList: document.getElementById("resultBadgeList"),
+      resultSharePanel: document.getElementById("resultSharePanel"),
+      shareButton: document.getElementById("shareButton"),
+      resultShareStatus: document.getElementById("resultShareStatus"),
       rankingHeading: document.getElementById("rankingHeading"),
       rankingList: document.getElementById("rankingList")
     };
@@ -7261,7 +7389,9 @@
       practiceRooftopRevealRespawnAt: 0,
       nextPracticeDestructibleRespawnCheckAt: 0,
       pendingModalAction: "",
-      isShowingPriorityMessage: false
+      isShowingPriorityMessage: false,
+      runStats: createRunStats(),
+      lastResultShareText: ""
     };
 
     const input = {
@@ -7290,6 +7420,59 @@
         completedAt: 0
       }
     };
+
+    function createRunStats() {
+      return {
+        punchCount: 0,
+        dashPunchCount: 0,
+        missPunchCount: 0,
+        mobHitCount: 0,
+        mobDownCount: 0,
+        pickupCount: 0,
+        carrierPickupCount: 0,
+        trapCount: 0,
+        escapeCount: 0,
+        carHitCount: 0,
+        rainyPickupCount: 0,
+        lastPickupLabel: ""
+      };
+    }
+
+    function normalizeRunStats(stats = {}) {
+      if (!stats || typeof stats !== "object") stats = {};
+      const normalized = createRunStats();
+      Object.keys(normalized).forEach((key) => {
+        if (key === "lastPickupLabel") {
+          normalized[key] = typeof stats[key] === "string" ? stats[key] : "";
+          return;
+        }
+        normalized[key] = Number.isFinite(stats[key]) ? Math.max(0, Math.floor(stats[key])) : 0;
+      });
+      return normalized;
+    }
+
+    function bumpRunStat(key, amount = 1) {
+      if (!game.runStats) game.runStats = createRunStats();
+      const current = Number.isFinite(game.runStats[key]) ? game.runStats[key] : 0;
+      game.runStats[key] = Math.max(0, current + amount);
+    }
+
+    function recordRingPickup(target) {
+      if (!target) return;
+      if (!game.runStats) game.runStats = createRunStats();
+      bumpRunStat("pickupCount");
+      if (target.source === "carrier") {
+        bumpRunStat("carrierPickupCount");
+        game.runStats.lastPickupLabel = game.carrierColorName
+          ? `${game.carrierColorName}ふくの ひとから`
+          : "にげたひとから";
+      } else {
+        game.runStats.lastPickupLabel = "まちのなか";
+      }
+      if ((game.weatherBlend || 0) > 0.5) {
+        bumpRunStat("rainyPickupCount");
+      }
+    }
 
     const sound = {
       /*
@@ -11402,6 +11585,9 @@
         playSound("back");
         showTitle();
       });
+      if (els.shareButton) {
+        els.shareButton.addEventListener("click", shareResult);
+      }
       els.quitPracticeButton.addEventListener("click", () => {
         if (game.screen !== "playing" || game.mode !== "practice") return;
         playHaptic("button");
@@ -12420,6 +12606,7 @@
       if (game.screen !== "playing") return;
       if (now - game.lastEscapeToastAt < CONFIG.escapeToastCooldownMs) return;
       game.lastEscapeToastAt = now;
+      bumpRunStat("escapeCount");
       showStatusToast(["にげきった！"], {
         variant: "good",
         duration: CONFIG.statusToastDurationMs,
@@ -13145,6 +13332,8 @@
       game.punchUntil = 0;
       game.punchHitAt = 0;
       game.punchSide = 1;
+      game.runStats = createRunStats();
+      game.lastResultShareText = "";
       resetWeatherState();
       clearCarrierState();
       world.cameraYaw = 0;
@@ -17922,11 +18111,13 @@
       game.punchUntil = now + CONFIG.punchMotionMs;
       game.punchHitAt = now + CONFIG.punchHitDelayMs;
       game.punchSide *= -1;
+      bumpRunStat("punchCount");
 
       const wantsRun = getRunInput() && !game.staminaDepleted && game.stamina > 0;
       game.isDashAttack = wantsRun;
 
       if (game.isDashAttack) {
+        bumpRunStat("dashPunchCount");
         const forward = getPlayerForwardVector();
         const nextX = world.player.position.x + forward.x * 2.5;
         const nextZ = world.player.position.z + forward.z * 2.5;
@@ -17942,6 +18133,7 @@
       // ヒット判定をアニメーションの腕が伸びたタイミングまで遅延させる
       game.pendingPunchTarget = findPunchTarget();
       if (!game.pendingPunchTarget) {
+        bumpRunStat("missPunchCount");
         playLimitedSound("miss", 180);
       }
     }
@@ -18085,6 +18277,7 @@
       npc.hp = Math.max(0, (npc.hp ?? CONFIG.walkerHp) - 1);
       npc.hitReactUntil = now + 220;
       npc.pauseUntil = 0;
+      bumpRunStat("mobHitCount");
       incrementCombo();
       applyPunchKnockback(npc);
       spawnPunchHitEffect(npc.group.position.x, npc.group.position.z);
@@ -18123,6 +18316,7 @@
       const dropX = npc.group.position.x;
       const dropZ = npc.group.position.z;
       const wasCarrier = npc.isCarrier;
+      bumpRunStat("mobDownCount");
 
       playHaptic("break");
       playSound("mobDown");
@@ -18507,6 +18701,7 @@
       target.mesh.visible = false;
 
       if (target.kind === "trap") {
+        bumpRunStat("trapCount");
         playHaptic("danger");
         playSound("trap");
         spawnTrapExplosionEffect(pickupX, pickupZ);
@@ -18522,6 +18717,7 @@
       playSound("pickup");
       spawnPickupEffect(pickupX, pickupZ);
       game.score += 1;
+      recordRingPickup(target);
 
       if (game.mode === "practice") {
         if (target.source === "carrier") {
@@ -19130,6 +19326,7 @@
     }
 
     function triggerCarHitPenalty(car) {
+      bumpRunStat("carHitCount");
       game.playerStunnedUntil = performance.now() + 2000;
       game.playerKnockbackUntil = game.playerStunnedUntil;
       resetActiveControls();
@@ -19234,13 +19431,9 @@
       els.resultTimeLabel.textContent = timeLabel;
       els.resultTimeValue.textContent = timeValue;
 
+      let rankStr = "";
       if (!practice) {
-        let rankStr = "C";
-        if (cleared) {
-          if (game.clearTime < 60) rankStr = "S";
-          else if (game.clearTime < 90) rankStr = "A";
-          else if (game.clearTime < 120) rankStr = "B";
-        }
+        rankStr = getResultRankString(cleared);
         els.resultRankValue.textContent = rankStr;
         els.resultRankValue.className = `rank-${rankStr}`;
         els.resultRankBox.classList.remove("hidden");
@@ -19253,7 +19446,237 @@
 
       els.rankingHeading.textContent = practice ? "れんしゅう こすう らんきんぐ" : "ほんばん らんきんぐ";
       setResultMessage(cleared, caught, rank);
+      const resultData = {
+        cleared,
+        caught,
+        practice,
+        rank,
+        rankStr,
+        resultMode,
+        resultState,
+        ringText,
+        timeLabel,
+        timeValue,
+        score: game.score,
+        target: CONFIG.targetRingCount,
+        stats: normalizeRunStats(game.runStats)
+      };
+      renderResultAdventure(resultData);
+      const achievementState = updateResultAchievements(resultData);
+      renderResultBadges(achievementState);
+      game.lastResultShareText = createResultShareText(resultData, achievementState);
+      updateResultShareUi();
       renderRankingList(practice ? loadPracticeRanking() : loadRanking(), practice ? "practice" : "normal", rank);
+    }
+
+    function getResultRankString(cleared) {
+      if (!cleared) return "C";
+      if (game.clearTime < 60) return "S";
+      if (game.clearTime < 90) return "A";
+      if (game.clearTime < 120) return "B";
+      return "C";
+    }
+
+    function renderResultAdventure(resultData) {
+      if (!els.resultLogList) return;
+      const lines = createResultLogLines(resultData);
+      els.resultLogList.replaceChildren(...lines.map((line) => {
+        const item = document.createElement("li");
+        item.textContent = line;
+        return item;
+      }));
+    }
+
+    function createResultLogLines(resultData) {
+      const stats = resultData.stats;
+      const lines = [];
+      if (resultData.practice) {
+        lines.push(`${resultData.timeValue} れんしゅうして ${resultData.score}こ あつめた`);
+      } else if (resultData.cleared) {
+        lines.push(`${resultData.timeValue}で ${resultData.target}このわっかを あつめた`);
+      } else if (resultData.caught) {
+        lines.push(`${resultData.score}こ あつめたところで みつかった`);
+      } else {
+        lines.push(`${resultData.score}こ あつめて じかんぎれ`);
+      }
+
+      if (stats.lastPickupLabel) {
+        lines.push(`さいごのわっか: ${stats.lastPickupLabel}`);
+      }
+      if (stats.punchCount > 0) {
+        const dash = stats.dashPunchCount > 0 ? ` / だっしゅ ${stats.dashPunchCount}かい` : "";
+        lines.push(`ぱんち: ${stats.punchCount}かい${dash}`);
+      }
+      if (stats.escapeCount > 0) {
+        lines.push(`にげきり: ${stats.escapeCount}かい`);
+      }
+      if (stats.carHitCount > 0 || stats.trapCount > 0) {
+        const events = [];
+        if (stats.carHitCount > 0) events.push(`くるま ${stats.carHitCount}かい`);
+        if (stats.trapCount > 0) events.push(`わな ${stats.trapCount}かい`);
+        lines.push(`あぶないできごと: ${events.join(" / ")}`);
+      }
+      if (stats.carrierPickupCount > 0) {
+        lines.push(`にげたひとの わっかを ${stats.carrierPickupCount}こ みつけた`);
+      }
+      if (stats.rainyPickupCount > 0) {
+        lines.push(`あめのなかで ${stats.rainyPickupCount}こ みつけた`);
+      }
+      return lines.slice(0, 6);
+    }
+
+    function loadAchievementIds() {
+      try {
+        const raw = localStorage.getItem(CONFIG.achievementStorageKey);
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return new Set();
+        return new Set(parsed.filter((id) => ACHIEVEMENT_BY_ID.has(id)));
+      } catch (error) {
+        console.warn("しょうごうを よみこめませんでした。", error);
+        return new Set();
+      }
+    }
+
+    function saveAchievementIds(ids) {
+      try {
+        localStorage.setItem(CONFIG.achievementStorageKey, JSON.stringify([...ids]));
+      } catch (error) {
+        console.warn("しょうごうを ほぞんできませんでした。", error);
+      }
+    }
+
+    function getResultAchievementIds(resultData) {
+      const stats = resultData.stats;
+      const ids = [];
+      if (resultData.cleared) ids.push("first-clear");
+      if (resultData.cleared && game.clearTime < 90) ids.push("fast-clear");
+      if (resultData.cleared && stats.carHitCount === 0 && stats.trapCount === 0) ids.push("clean-run");
+      if (stats.punchCount >= 5) ids.push("puncher");
+      if (stats.escapeCount > 0) ids.push("escape-artist");
+      if (stats.carrierPickupCount > 0) ids.push("carrier-chaser");
+      if (stats.rainyPickupCount >= 2) ids.push("rain-explorer");
+      if (resultData.practice && resultData.score >= 10) ids.push("practice-collector");
+      return ids;
+    }
+
+    function updateResultAchievements(resultData) {
+      const stored = loadAchievementIds();
+      const earned = getResultAchievementIds(resultData);
+      const newly = earned.filter((id) => !stored.has(id));
+      if (newly.length) {
+        newly.forEach((id) => stored.add(id));
+        saveAchievementIds(stored);
+      }
+      return { earned, newly };
+    }
+
+    function renderResultBadges(achievementState) {
+      if (!els.resultBadges || !els.resultBadgeList) return;
+      const ids = achievementState.newly.length
+        ? achievementState.newly
+        : achievementState.earned.slice(0, 3);
+      if (!ids.length) {
+        els.resultBadges.classList.add("hidden");
+        els.resultBadgeList.replaceChildren();
+        return;
+      }
+
+      els.resultBadges.classList.remove("hidden");
+      els.resultBadgeList.replaceChildren(...ids.map((id) => {
+        const achievement = ACHIEVEMENT_BY_ID.get(id);
+        const item = document.createElement("li");
+        const text = document.createElement("span");
+        const name = document.createElement("span");
+        const note = document.createElement("span");
+        name.className = "badgeName";
+        name.textContent = achievement?.name || "しょうごう";
+        note.className = "badgeNote";
+        note.textContent = achievement?.note || "";
+        text.append(name, note);
+        item.append(text);
+        if (achievementState.newly.includes(id)) {
+          const badge = document.createElement("span");
+          badge.className = "badgeNew";
+          badge.textContent = "NEW";
+          item.append(badge);
+        }
+        return item;
+      }));
+    }
+
+    function createResultShareText(resultData, achievementState) {
+      const lines = [`${CONFIG.title} ${resultData.resultState}`];
+      if (resultData.practice) {
+        lines.push(`れんしゅう: ${resultData.score}こ / ${resultData.timeValue}`);
+      } else {
+        lines.push(`わっか: ${resultData.score}/${resultData.target}こ / ${resultData.timeLabel}: ${resultData.timeValue} / ランク${resultData.rankStr}`);
+      }
+
+      const badgeId = achievementState.newly[0] || achievementState.earned[0];
+      const achievement = ACHIEVEMENT_BY_ID.get(badgeId);
+      if (achievement) {
+        lines.push(`しょうごう: ${achievement.name}`);
+      }
+      lines.push("#わっかあつめ");
+      return lines.join("\n");
+    }
+
+    function updateResultShareUi() {
+      if (!els.resultSharePanel) return;
+      els.resultSharePanel.classList.toggle("hidden", !game.lastResultShareText);
+      if (els.resultShareStatus) {
+        els.resultShareStatus.textContent = "";
+      }
+    }
+
+    async function shareResult() {
+      if (!game.lastResultShareText) return;
+      unlockAudio();
+      playHaptic("button");
+      playSound("button");
+
+      const text = game.lastResultShareText;
+      setResultShareStatus("シェアを じゅんびしています");
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: CONFIG.title, text });
+          setResultShareStatus("シェアを ひらきました");
+          return;
+        }
+        await copyTextToClipboard(text);
+        setResultShareStatus("けっかを コピーしました");
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.warn("けっかを シェアできませんでした。", error);
+        setResultShareStatus("コピーできませんでした");
+      }
+    }
+
+    function setResultShareStatus(message) {
+      if (els.resultShareStatus) {
+        els.resultShareStatus.textContent = message;
+      }
+    }
+
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      if (!copied) {
+        throw new Error("copy command failed");
+      }
     }
 
     function renderRankingList(ranking, type, currentRank = 0) {
@@ -19350,6 +19773,7 @@
           blend: game.weatherBlend,
           lastRollElapsed: game.lastWeatherRollElapsed
         },
+        runStats: normalizeRunStats(game.runStats),
         bgmName: game.mode === "normal" ? (sound.bgmName || "") : "",
         carrierState: {
           npcId: game.carrierNpcId || "",
@@ -19464,6 +19888,7 @@
           ? Math.max(0, parsed.weather.lastRollElapsed)
           : 0
       };
+      parsed.runStats = normalizeRunStats(parsed.runStats);
       parsed.carrierState = parsed.carrierState && typeof parsed.carrierState === "object"
         ? parsed.carrierState
         : {};
@@ -19827,6 +20252,8 @@
       game.lastHintScore = -1;
       game.lastFoundToastAt = 0;
       game.lastEscapeToastAt = 0;
+      game.runStats = normalizeRunStats(progressSave.runStats);
+      game.lastResultShareText = "";
 
       applySavedDestructibleState(progressSave.destroyedDestructibleIds);
       applySavedRingState(progressSave.rings);
